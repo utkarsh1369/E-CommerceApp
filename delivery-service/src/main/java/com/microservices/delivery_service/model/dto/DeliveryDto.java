@@ -1,0 +1,23 @@
+package com.microservices.delivery_service.model.dto;
+
+import com.microservices.delivery_service.model.Status;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class DeliveryDto {
+
+    private Long deliveryId;
+    private UUID userId;
+    private Long orderId;
+    private Status status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime expectedDeliveryDate;
+}

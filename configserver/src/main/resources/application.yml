@@ -1,0 +1,20 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: CONFIG-SERVER
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/utkarsh1369/microservice-config.git
+          clone-on-start: true
+          default-label: main
+          skip-ssl-validation: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
