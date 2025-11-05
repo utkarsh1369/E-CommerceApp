@@ -63,6 +63,5 @@ public class UserMapper {
         if (dto.getAddress() != null) {
             user.setAddress(dto.getAddress());
         }
-        // Email and password updates handled separately
     }
 }
