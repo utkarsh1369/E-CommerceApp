@@ -1,6 +1,6 @@
 package com.microservices.user_service.controller;
 
-import com.microservices.user_service.config.AdminSecretProperties;
+import com.microservices.user_service.model.dto.AdminSecretProperties;
 import com.microservices.user_service.exception.DuplicateEmailException;
 import com.microservices.user_service.model.dto.*;
 import com.microservices.user_service.model.UserPrincipal;

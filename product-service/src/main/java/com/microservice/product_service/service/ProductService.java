@@ -1,6 +1,6 @@
 package com.microservice.product_service.service;
 
-import com.microservice.product_service.dto.ProductDTO;
+import com.microservice.product_service.model.dto.ProductDTO;
 import java.util.List;
 
 public interface ProductService {

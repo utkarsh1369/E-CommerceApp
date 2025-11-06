@@ -1,4 +1,4 @@
-package com.microservice.product_service.dto;
+package com.microservice.product_service.model.dto;
 
 import lombok.*;
 

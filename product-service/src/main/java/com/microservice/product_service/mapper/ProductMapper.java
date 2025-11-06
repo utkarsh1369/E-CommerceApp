@@ -1,9 +1,10 @@
 package com.microservice.product_service.mapper;
 
-import com.microservice.product_service.dto.ProductDTO;
+import com.microservice.product_service.model.dto.ProductDTO;
 import com.microservice.product_service.model.Product;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +54,6 @@ public class ProductMapper {
         product.setProductName(dto.getProductName());
         product.setProductDescription(dto.getProductDescription());
         product.setProductPrice(dto.getProductPrice());
-        // Don't update productId, createdAt, or updatedAt
+        product.setUpdatedAt(LocalDateTime.now());
     }
 }

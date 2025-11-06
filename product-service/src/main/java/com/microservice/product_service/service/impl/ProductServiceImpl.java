@@ -1,6 +1,6 @@
 package com.microservice.product_service.service.impl;
 
-import com.microservice.product_service.dto.ProductDTO;
+import com.microservice.product_service.model.dto.ProductDTO;
 import com.microservice.product_service.exception.ProductNotFoundException;
 import com.microservice.product_service.mapper.ProductMapper;
 import com.microservice.product_service.model.Product;

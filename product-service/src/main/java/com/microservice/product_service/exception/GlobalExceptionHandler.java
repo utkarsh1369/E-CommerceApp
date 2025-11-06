@@ -1,6 +1,7 @@
 package com.microservice.product_service.exception;
 
-import com.microservice.product_service.dto.ErrorResponse;
+import com.microservice.product_service.model.dto.ErrorResponse;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,21 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ErrorResponse> handleJwtException(JwtException ex, HttpServletRequest request) {
+        log.error("Jwt exception: {}", ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Jwt Verification Failed")
+                .message("Jwt Token is invalid.")
+                .path(request.getRequestURI())
+                .build();
+
+        return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(Exception.class)

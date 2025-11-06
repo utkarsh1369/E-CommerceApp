@@ -1,4 +1,4 @@
-package com.microservices.user_service.config;
+package com.microservices.user_service.model.dto;
 
 import lombok.Getter;
 import lombok.Setter;

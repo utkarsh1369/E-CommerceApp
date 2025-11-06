@@ -4,10 +4,8 @@ server:
 spring:
   application:
     name: PRODUCT-SERVICE
-
   config:
     import: "configserver:http://localhost:8888"
-
   datasource:
     url: jdbc:mysql://localhost:3397/productdb?createDatabaseIfNotExist=true
     username: root
@@ -16,7 +14,6 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -26,18 +23,6 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
-# Actuator Configuration
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
-
-# Logging Configuration
-logging:
-  level:
-    com.microservice.product_service: INFO
-    org.springframework.web: INFO
+jwt:
+  secret: my-secret-key-for-jwt-is-1234567!@#
+  expiration: 600000
