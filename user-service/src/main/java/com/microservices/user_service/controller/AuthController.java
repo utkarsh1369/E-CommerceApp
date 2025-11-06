@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,7 +32,7 @@ public class AuthController {
     private final AdminSecretProperties adminSecret;
 
 
-    @PostMapping("/register")
+    @PostMapping("/register-user")
     @Operation(description = "To register a new user.")
     public ResponseEntity<UserDto> register(@Valid @RequestBody UserRegistrationDto registrationDto) {
         log.info("Registration request received for email: {}", registrationDto.getEmail());
