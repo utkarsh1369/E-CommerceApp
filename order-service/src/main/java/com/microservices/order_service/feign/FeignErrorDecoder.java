@@ -12,9 +12,10 @@ public class FeignErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
-        log.error("Feign error: methodKey={}, status={}", methodKey, response.status());
+        String url = response.request().url();
+        log.error("Feign error: url={}, status={}", url, response.status());
 
-        if (methodKey.contains("ProductClient")) {
+        if (url.contains("/products")) {
             if (response.status() == 404) {
                 return new ProductServiceException("Product not found in Product Service");
             } else if (response.status() >= 500) {

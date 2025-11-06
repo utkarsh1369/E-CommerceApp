@@ -14,7 +14,7 @@ import java.util.UUID;
 public class DeliveryDto {
 
     private Long deliveryId;
-    private UUID userId;
+    private String userId;
     private Long orderId;
     private Status status;
     private LocalDateTime createdAt;

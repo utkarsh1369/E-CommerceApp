@@ -21,11 +21,8 @@ public class DeliveryEventConsumer {
 
     private final OrderRepository orderRepository;
 
-    @KafkaListener(
-            topics = "delivery-created",
-            groupId = "${spring.kafka.consumer.group-id:order-service-group}",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "delivery-created", groupId = "${spring.kafka.consumer.group-id:order-service-group}",
+            containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void consumeDeliveryCreatedEvent(@Payload DeliveryCreatedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.RECEIVED_PARTITION) int partition, @Header(KafkaHeaders.OFFSET) long offset, Acknowledgment acknowledgment) {
 

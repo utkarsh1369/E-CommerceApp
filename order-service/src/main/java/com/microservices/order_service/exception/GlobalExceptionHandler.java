@@ -23,13 +23,13 @@ public class GlobalExceptionHandler {
 
         log.error("Order not found: {}", ex.getMessage());
 
-        ErrorResponse error = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.NOT_FOUND.value(),
-                "Not Found",
-                ex.getMessage(),
-                request.getRequestURI()
-        );
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Order Not Found")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
@@ -38,31 +38,64 @@ public class GlobalExceptionHandler {
 
         log.error("Product service error: {}", ex.getMessage());
 
-        ErrorResponse error = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "Service Unavailable",
-                ex.getMessage(),
-                request.getRequestURI()
-        );
-
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error("Service Unavailable")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
         return new ResponseEntity<>(error, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @ExceptionHandler(DeliveryNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDeliveryNotFoundException(DeliveryNotFoundException ex, HttpServletRequest request) {
+        log.error("Delivery Not Found: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Delivery Not Found")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(FeignException.class)
     public ResponseEntity<ErrorResponse> handleFeignException(FeignException ex, HttpServletRequest request) {
 
-        log.error("Feign client error: {}", ex.getMessage());
+        log.error("Feign client error: status={}, message={}", ex.status(), ex.getMessage());
 
-        ErrorResponse error = new ErrorResponse(
-                LocalDateTime.now(),
-                ex.status(),
-                "External Service Error",
-                "Failed to communicate with external service",
-                request.getRequestURI()
-        );
-        return new ResponseEntity<>(error, HttpStatus.valueOf(ex.status()));
+        String message;
+        HttpStatus status;
+        switch (ex.status()) {
+            case 404 -> {
+                message = "Requested resource not found in external service.";
+                status = HttpStatus.NOT_FOUND;
+            }
+            case 503 -> {
+                message = "External service is currently unavailable.";
+                status = HttpStatus.SERVICE_UNAVAILABLE;
+            }
+            case 400 -> {
+                message = "Bad request sent to external service.";
+                status = HttpStatus.BAD_REQUEST;
+            }
+            default -> {
+                message = "Failed to communicate with external service.";
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+            }
+        }
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .error("External Service Error")
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(error, status);
     }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -79,7 +112,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Validation Failed")
-                .message("Input validation failed")
+                .message("Input Validation Failed")
                 .path(request.getRequestURI())
                 .validationErrors(validationErrors)
                 .build();
@@ -91,13 +124,13 @@ public class GlobalExceptionHandler {
 
         log.error("Unexpected error occurred: ", ex);
 
-        ErrorResponse error = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal Server Error",
-                "An unexpected error occurred",
-                request.getRequestURI()
-        );
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Unexpected Error Occurred")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

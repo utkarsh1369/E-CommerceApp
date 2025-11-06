@@ -6,18 +6,15 @@ spring:
     name: ORDER-SERVICE
   config:
     import: optional:configserver:http://localhost:8888
-
   datasource:
     url: jdbc:mysql://localhost:3397/orderdb
     username: root
     password: mySQL25
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
-
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -30,4 +27,3 @@ spring:
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.microservices.order_service.kafka.event.DeliveryCreatedEvent
-

@@ -1,9 +1,11 @@
 package com.microservices.order_service.config;
 
 import com.microservices.order_service.kafka.event.DeliveryCreatedEvent;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -15,14 +17,14 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import java.util.HashMap;
 import java.util.Map;
 
+@Getter
+@Setter
 @EnableKafka
 @Configuration
+@ConfigurationProperties(prefix = "kafka")
 public class KafkaConsumerConfig {
 
-    @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
-
-    @Value("${spring.kafka.consumer.group-id:order-service-group}")
     private String groupId;
 
     @Bean

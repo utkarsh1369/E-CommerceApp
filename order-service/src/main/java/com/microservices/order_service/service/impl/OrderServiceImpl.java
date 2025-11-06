@@ -1,5 +1,6 @@
 package com.microservices.order_service.service.impl;
 
+import com.microservices.order_service.exception.DeliveryNotFoundException;
 import com.microservices.order_service.exception.OrderNotFoundException;
 import com.microservices.order_service.exception.ProductServiceException;
 import com.microservices.order_service.feign.DeliveryClient;
@@ -61,7 +62,6 @@ public class OrderServiceImpl implements OrderService {
                 .eventType("ORDER_CREATED")
                 .orderId(savedOrder.getOrderId().toString())
                 .userId(savedOrder.getUserId())
-                .userEmail(getUserEmail(savedOrder.getUserId())) // You need to implement this
                 .message(String.format("Order created successfully with ID: %d. Total amount: ₹%.2f",
                         savedOrder.getOrderId(), savedOrder.getOrderAmount()))
                 .status(savedOrder.getStatus().name())
@@ -98,7 +98,6 @@ public class OrderServiceImpl implements OrderService {
                 .eventType("ORDER_UPDATED")
                 .orderId(updatedOrder.getOrderId().toString())
                 .userId(updatedOrder.getUserId())
-                .userEmail(getUserEmail(updatedOrder.getUserId()))
                 .message(String.format("Order #%d has been updated. New total amount: ₹%.2f",
                         updatedOrder.getOrderId(), updatedOrder.getOrderAmount()))
                 .status(updatedOrder.getStatus().name())
@@ -138,18 +137,11 @@ public class OrderServiceImpl implements OrderService {
 
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
-
         Long deliveryId = order.getDeliveryId();
         if (deliveryId == null) {
-            throw new RuntimeException("No delivery assigned to this order yet.");
+            throw new DeliveryNotFoundException("No delivery assigned to this order yet.");
         }
-
-        try {
-            return deliveryClient.getDeliveryById(deliveryId);
-        } catch (FeignException e) {
-            log.error("Failed to fetch delivery: {}", e.getMessage());
-            throw new RuntimeException("Failed to fetch delivery details", e);
-        }
+        return deliveryClient.getDeliveryById(deliveryId);
     }
 
     private BigDecimal calculateOrderAmount(List<OrderItemDto> orderItems) {
@@ -166,18 +158,12 @@ public class OrderServiceImpl implements OrderService {
                         itemDto.getProductId(), product.getProductPrice(),
                         itemDto.getQuantity(), itemTotal);
             } catch (FeignException e) {
-                log.error("Failed to fetch product {}: {}", itemDto.getProductId(), e.getMessage());
+                log.error("Failed to fetch product {}: ", itemDto.getProductId(), e);
                 throw new ProductServiceException("Failed to fetch product details for product ID: " + itemDto.getProductId());
             }
         }
 
         log.info("Calculated order amount: {}", totalAmount);
         return totalAmount;
-    }
-
-    private String getUserEmail(String userId) {
-        // TODO: Fetch from User Service via Feign Client
-        // For now, return a dummy email
-        return userId + "@example.com";
     }
 }
