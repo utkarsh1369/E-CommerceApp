@@ -6,9 +6,8 @@ import com.microservices.user_service.model.Role;
 import com.microservices.user_service.model.Users;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -19,13 +18,18 @@ public class UserMapper {
             return null;
         }
 
+        if (user.getCreatedAt() == null) {
+            user.setCreatedAt(LocalDateTime.now());
+        }
+        user.setUpdatedAt(LocalDateTime.now());
+
         return UserDto.builder()
                 .userId(user.getUserId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .address(user.getAddress())
-                .roles(user.getRoles())
+                .roles(new HashSet<>(user.getRoles()))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -39,7 +43,7 @@ public class UserMapper {
                 .password(encodedPassword)
                 .phoneNumber(dto.getPhoneNumber())
                 .address(dto.getAddress())
-                .roles(Set.of(Role.USER)) // Default role
+                .roles(new HashSet<>(Set.of(Role.USER)))
                 .build();
     }
 

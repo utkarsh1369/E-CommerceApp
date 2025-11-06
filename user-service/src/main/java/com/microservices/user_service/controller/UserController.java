@@ -3,6 +3,8 @@ package com.microservices.user_service.controller;
 import com.microservices.user_service.model.dto.UserDto;
 import com.microservices.user_service.model.Role;
 import com.microservices.user_service.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,12 +19,14 @@ import java.util.Set;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Tag(name = "User APIs")
 public class UserController {
 
     private final UserService userService;
 
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(description = "SUPER-ADMIN can access details of all the user.")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         log.info("REST request to get all users");
         List<UserDto> users = userService.getAllUsers();
@@ -32,6 +36,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
+    @Operation(description = "To get information of a user by id.Only admin and the User itself can access this.")
     public ResponseEntity<UserDto> getUserById(@PathVariable String userId) {
         log.info("REST request to get user with ID: {}", userId);
         UserDto user = userService.getUserById(userId);
@@ -40,6 +45,7 @@ public class UserController {
 
     @GetMapping("/email/{email}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(description = "To get the user details by email.Only Super-admin can access.")
     public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
         log.info("REST request to get user with email: {}", email);
         UserDto user = userService.getUserByEmail(email);
@@ -48,9 +54,8 @@ public class UserController {
 
     @PutMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
-    public ResponseEntity<UserDto> updateUser(
-            @PathVariable String userId,
-            @Valid @RequestBody UserDto userDto) {
+    @Operation(description = "To update a User.Super-admin and user itself can access only.")
+    public ResponseEntity<UserDto> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) {
         log.info("REST request to update user with ID: {}", userId);
         UserDto updatedUser = userService.updateUser(userId, userDto);
         return ResponseEntity.ok(updatedUser);
@@ -58,6 +63,7 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(description = "Super-admin can delete a user.")
     public ResponseEntity<Void> deleteUser(@PathVariable String userId) {
         log.info("REST request to delete user with ID: {}", userId);
         userService.deleteUser(userId);
@@ -67,9 +73,8 @@ public class UserController {
 
     @PutMapping("/{userId}/roles")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<UserDto> assignRoles(
-            @PathVariable String userId,
-            @RequestBody Set<Role> roles) {
+    @Operation(description = "Super-admin can assign roles to different users.")
+    public ResponseEntity<UserDto> assignRoles(@PathVariable String userId, @RequestBody Set<Role> roles) {
         log.info("REST request to assign roles to user: {}", userId);
         UserDto user = userService.assignRoles(userId, roles);
         return ResponseEntity.ok(user);

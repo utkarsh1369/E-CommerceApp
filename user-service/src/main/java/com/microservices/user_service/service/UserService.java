@@ -11,6 +11,10 @@ public interface UserService {
 
     UserDto registerUser(UserRegistrationDto registrationDto);
 
+    UserDto createSuperAdmin(UserRegistrationDto registrationDto);
+
+    boolean superAdminExists();
+
     UserDto getUserById(String userId);
 
     UserDto getUserByEmail(String email);

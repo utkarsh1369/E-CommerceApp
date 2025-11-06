@@ -14,9 +14,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
 
 jwt:
   secret: my-secret-key-for-jwt-is-1234567!@#
   expiration: 600000
+
+admin:
+  secret:
+    code: ADMIN-secret-code-is-admin12345!@#

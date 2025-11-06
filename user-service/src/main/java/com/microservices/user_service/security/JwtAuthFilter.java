@@ -57,7 +57,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 log.debug("User {} authenticated with roles: {}", email, userDetails.getAuthorities());
             }
         }
-
         filterChain.doFilter(request, response);
     }
 }

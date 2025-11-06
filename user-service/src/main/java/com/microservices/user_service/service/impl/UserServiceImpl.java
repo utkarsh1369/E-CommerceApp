@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -46,6 +47,43 @@ public class UserServiceImpl implements UserService {
 
         log.info("User registered successfully with ID: {}", savedUser.getUserId());
         return userMapper.toDto(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public UserDto createSuperAdmin(UserRegistrationDto registrationDto) {
+        log.info("Creating SUPER ADMIN with email: {}", registrationDto.getEmail());
+
+        if (userRepository.existsByEmail(registrationDto.getEmail())) {
+            throw new DuplicateEmailException("Email already registered: " + registrationDto.getEmail());
+        }
+        if (superAdminExists()) {
+            throw new IllegalStateException("Super Admin already exists in the system");
+        }
+
+        String encodedPassword = passwordEncoder.encode(registrationDto.getPassword());
+
+        Users superAdmin = Users.builder()
+                .userId(UUID.randomUUID().toString())
+                .name(registrationDto.getName())
+                .email(registrationDto.getEmail())
+                .password(encodedPassword)
+                .phoneNumber(registrationDto.getPhoneNumber())
+                .address(registrationDto.getAddress())
+                .roles(Set.of(Role.SUPER_ADMIN))
+                .build();
+        Users savedAdmin = userRepository.save(superAdmin);
+
+        log.info("🔐 SUPER ADMIN CREATED SUCCESSFULLY: {}", savedAdmin.getEmail());
+
+        return userMapper.toDto(savedAdmin);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean superAdminExists() {
+        return userRepository.findAll().stream()
+                .anyMatch(user -> user.getRoles() != null && user.getRoles().contains(Role.SUPER_ADMIN));
     }
 
     @Override

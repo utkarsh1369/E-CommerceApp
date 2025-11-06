@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -48,7 +49,7 @@ public class Users {
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
-    private Set<Role> roles;
+    private Set<Role> roles = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -61,7 +62,8 @@ public class Users {
     @PrePersist
     public void prePersist() {
         if (roles == null || roles.isEmpty()) {
-            roles = Set.of(Role.USER);
+            roles = new HashSet<>();
+            roles.add(Role.USER);
         }
     }
 }

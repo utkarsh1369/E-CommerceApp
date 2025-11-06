@@ -33,17 +33,17 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll() // Public endpoints
+                        .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll() // Public registration
-                        .anyRequest().authenticated() // All other endpoints require authentication
+                        .requestMatchers(HttpMethod.POST, "/user/register","/user/login").permitAll()
+                        .requestMatchers( "/swagger-ui/**","/v3/api-docs/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
