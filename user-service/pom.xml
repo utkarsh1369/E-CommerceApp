@@ -12,7 +12,7 @@
 	<artifactId>user-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>user-service</name>
-	<description>this is the user service for handeling user operations</description>
+	<description>this is the user service for handling user operations</description>
 	<url/>
 	<licenses>
 		<license/>
