@@ -17,8 +17,8 @@ spring:
     show-sql: true
   kafka:
     bootstrap-servers: localhost:9092
+    group-id: order-service-group
     consumer:
-      group-id: order-service-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       auto-offset-reset: earliest
@@ -31,3 +31,11 @@ spring:
 jwt:
   secret: my-secret-key-for-jwt-is-1234567!@#
   expiration: 600000
+
+logging:
+  file:
+    name: logs/order-service.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO

@@ -40,7 +40,7 @@ public class OrderController {
     }
 
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN')")
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<OrderResponseDto>> findAllOrders() {
         log.info("REST request to get all orders");
         List<OrderResponseDto> orders = orderService.findAllOrders();

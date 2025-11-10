@@ -21,7 +21,7 @@ import java.util.Map;
 @Setter
 @EnableKafka
 @Configuration
-@ConfigurationProperties(prefix = "kafka")
+@ConfigurationProperties(prefix = "spring.kafka")
 public class KafkaConsumerConfig {
 
     private String bootstrapServers;

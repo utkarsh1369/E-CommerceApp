@@ -34,3 +34,11 @@ feign:
         connectTimeout: 10000
         readTimeout: 8000
         loggerLevel: basic
+
+logging:
+  file:
+    name: logs/delivery-service.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO

@@ -8,32 +8,78 @@ spring:
     import: optional:configserver:http://localhost:8888
   cloud:
     gateway:
-      webflux:
-        discovery:
-          locator:
-            enabled: true
-            lower-case-service-id: true
-            routes:
-              - id: user-service
-                uri: lb://USER-SERVICE
-                predicates:
-                  - Path=/users/**
-              - id: product-service
-                uri: lb://PRODUCT-SERVICE
-                predicates:
-                    - Path=/products/**
-              - id: order-service
-                uri: lb://ORDER-SERVICE
-                predicates:
-                    - Path=/orders/**
-              - id: delivery-service
-                uri: lb://DELIVERY-SERVICE
-                predicates:
-                    - Path=/delivery/**
-                filters:
-                  - name: RequestRateLimiter
-                    args:
-                      redis-rate-limiter:
-                        replenishRate: 10
-                        burstCapacity: 20
-                        requestedTokens: 1
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # Public Auth Routes
+        - id: auth-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
+        # Protected User Routes
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/**
+          filters:
+            - JwtAuthenticationFilter  # ✅ Auth filter applied
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
+        - id: product-service
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/products/**
+          filters:
+            - JwtAuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/orders/**
+          filters:
+            - JwtAuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
+        - id: delivery-service
+          uri: lb://DELIVERY-SERVICE
+          predicates:
+            - Path=/delivery/**
+          filters:
+            - JwtAuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
+jwt:
+  secret: ${JWT_SECRET:my-secret-key-for-jwt-is-1234567!@#}
+  expiration: 600000
+
+logging:
+  level:
+    com.microservices.api_gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG

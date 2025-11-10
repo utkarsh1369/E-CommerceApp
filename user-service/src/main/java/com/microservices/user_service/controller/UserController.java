@@ -17,14 +17,14 @@ import java.util.Set;
 
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api/v1/users")
 @RequiredArgsConstructor
 @Tag(name = "User APIs")
 public class UserController {
 
     private final UserService userService;
 
-    @GetMapping("/all")
+    @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "SUPER-ADMIN can access details of all the user.")
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -43,7 +43,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/email/{email}")
+    @GetMapping("/{email}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "To get the user details by email.Only Super-admin can access.")
     public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
@@ -52,7 +52,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @PutMapping("/{userId}")
+    @PutMapping("/update/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
     @Operation(description = "To update a User.Super-admin and user itself can access only.")
     public ResponseEntity<UserDto> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) {
@@ -61,7 +61,7 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    @DeleteMapping("/{userId}")
+    @DeleteMapping("/delete/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "Super-admin can delete a user.")
     public ResponseEntity<Void> deleteUser(@PathVariable String userId) {
@@ -71,7 +71,7 @@ public class UserController {
     }
 
 
-    @PutMapping("/{userId}/roles")
+    @PutMapping("/assign-role/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "Super-admin can assign roles to different users.")
     public ResponseEntity<UserDto> assignRoles(@PathVariable String userId, @RequestBody Set<Role> roles) {
@@ -79,4 +79,9 @@ public class UserController {
         UserDto user = userService.assignRoles(userId, roles);
         return ResponseEntity.ok(user);
     }
+    //TODO:centralized logging-> done
+    //TODO:swagger details
+    //TODO:15 factor microservices
+    //TODO:API versioning->done
+    //TODO:RichardSon restapi model->done
 }
