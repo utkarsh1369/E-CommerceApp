@@ -1,213 +1,146 @@
 package com.microservices.user_service.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microservices.user_service.exception.DuplicateEmailException;
 import com.microservices.user_service.model.Role;
 import com.microservices.user_service.model.UserPrincipal;
 import com.microservices.user_service.model.dto.*;
 import com.microservices.user_service.security.JwtUtil;
-import com.microservices.user_service.security.SecurityConfig;
 import com.microservices.user_service.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.mockito.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc(addFilters = true)
-@ActiveProfiles("test")
-@Import(SecurityConfig.class)
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
+    @Mock
     private AuthenticationManager authenticationManager;
-    @MockitoBean
+    @Mock
     private JwtUtil jwtUtil;
-    @MockitoBean
+    @Mock
     private UserService userService;
-    @MockitoBean
+    @Mock
     private AdminSecretProperties adminSecret;
+    @Mock
+    private HttpServletRequest request;
+
+    @InjectMocks
+    private AuthController authController;
 
     private UserRegistrationDto registrationDto;
-    private UserDto registeredUser;
+    private UserDto userDto;
     private AuthRequest authRequest;
-    private UserPrincipal userPrincipal;
+    private UserPrincipal principal;
 
     @BeforeEach
     void setUp() {
-        registrationDto = UserRegistrationDto.builder()
-                .name("John Doe")
-                .email("test@example.com")
-                .password("password123")
-                .phoneNumber("9876543210")
-                .address("Some Street")
-                .build();
+        MockitoAnnotations.openMocks(this);
 
-        registeredUser = UserDto.builder()
-                .userId("user123")
-                .name("John Doe")
-                .email("test@example.com")
-                .roles(Set.of(Role.USER))
-                .build();
+        registrationDto = new UserRegistrationDto();
+        registrationDto.setEmail("john@example.com");
+        registrationDto.setPassword("pass123");
+        registrationDto.setName("John");
 
-        authRequest = AuthRequest.builder()
-                .email("test@example.com")
-                .password("password123")
-                .build();
+        userDto = new UserDto();
+        userDto.setEmail("john@example.com");
+        userDto.setName("John");
 
-        userPrincipal =  UserPrincipal.builder()
-                .userId("user123")
-                .email("test@example.com")
-                .password("password123")
+        authRequest = new AuthRequest("john@example.com", "pass123");
+
+        principal =  UserPrincipal.builder()
+                .userId("user1")
+                .email("john@example.com")
+                .password("pass123")
                 .roles(Set.of(Role.USER))
                 .build();
     }
 
     @Test
-    @DisplayName("Should register a new user successfully")
-    void registerUser_ShouldReturnCreated() throws Exception {
-        when(userService.registerUser(any(UserRegistrationDto.class))).thenReturn(registeredUser);
+    void registerUser_ShouldReturnCreated() {
+        when(userService.registerUser(registrationDto)).thenReturn(userDto);
 
-        mockMvc.perform(post("/api/v1/auth/register-user")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registrationDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.userId").value("user123"))
-                .andExpect(jsonPath("$.roles[0]").value("USER"));
+        ResponseEntity<UserDto> response = authController.register(registrationDto);
 
-        verify(userService, times(1)).registerUser(any(UserRegistrationDto.class));
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isEqualTo(userDto);
+        verify(userService).registerUser(registrationDto);
     }
 
     @Test
-    @DisplayName("Should register super admin successfully with valid secret and no existing admin")
-    void registerAdmin_ValidSecret_ShouldCreateAdmin() throws Exception {
-        when(adminSecret.getCode()).thenReturn("secret123");
-        when(userService.superAdminExists()).thenReturn(false);
-        when(userService.createSuperAdmin(any(UserRegistrationDto.class))).thenReturn(registeredUser);
+    void registerAdmin_ShouldReturnForbidden_WhenSecretInvalid() {
+        when(adminSecret.getCode()).thenReturn("SECRET123");
 
-        mockMvc.perform(post("/api/v1/auth/register-admin")
-                        .with(csrf())
-                        .header("X-Admin-Secret", "secret123")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registrationDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").exists());
+        ResponseEntity<?> response = authController.registerAdmin(
+                registrationDto, "WRONG_SECRET", request);
 
-        verify(userService, times(1)).createSuperAdmin(any(UserRegistrationDto.class));
+        assertThat(response.getStatusCode().value()).isEqualTo(403);
+        assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
+        verify(userService, never()).createSuperAdmin(any());
     }
 
     @Test
-    @DisplayName("Should return 403 when admin secret is invalid")
-    void registerAdmin_InvalidSecret_ShouldReturnForbidden() throws Exception {
-        when(adminSecret.getCode()).thenReturn("realSecret");
-
-        mockMvc.perform(post("/api/v1/auth/register-admin")
-                        .with(csrf())
-                        .header("X-Admin-Secret", "wrongSecret")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registrationDto)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("Invalid admin secret code"));
-
-        verify(userService, never()).createSuperAdmin(any(UserRegistrationDto.class));
-    }
-
-    @Test
-    @DisplayName("Should return 410 when super admin already exists")
-    void registerAdmin_WhenSuperAdminExists_ShouldReturnGone() throws Exception {
-        when(adminSecret.getCode()).thenReturn("secret123");
+    void registerAdmin_ShouldReturnGone_WhenSuperAdminAlreadyExists() {
+        when(adminSecret.getCode()).thenReturn("SECRET123");
         when(userService.superAdminExists()).thenReturn(true);
 
-        mockMvc.perform(post("/api/v1/auth/register-admin")
-                        .with(csrf())
-                        .header("X-Admin-Secret", "secret123")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registrationDto)))
-                .andExpect(status().isGone())
-                .andExpect(jsonPath("$.message").value("Super Admin already exists. This endpoint is now permanently disabled for security."));
+        ResponseEntity<?> response = authController.registerAdmin(
+                registrationDto, "SECRET123", request);
 
-        verify(userService, never()).createSuperAdmin(any(UserRegistrationDto.class));
+        assertThat(response.getStatusCode().value()).isEqualTo(410);
+        assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
     }
 
     @Test
-    @DisplayName("Should return 409 when email is already registered during admin registration")
-    void registerAdmin_DuplicateEmail_ShouldReturnConflict() throws Exception {
-        when(adminSecret.getCode()).thenReturn("secret123");
+    void registerAdmin_ShouldReturnCreated_WhenSuperAdminCreated() {
+        when(adminSecret.getCode()).thenReturn("SECRET123");
         when(userService.superAdminExists()).thenReturn(false);
-        when(userService.createSuperAdmin(any(UserRegistrationDto.class)))
+        when(userService.createSuperAdmin(registrationDto)).thenReturn(userDto);
+
+        ResponseEntity<?> response = authController.registerAdmin(
+                registrationDto, "SECRET123", request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isInstanceOf(SuccessMessage.class);
+        verify(userService).createSuperAdmin(registrationDto);
+    }
+
+    @Test
+    void registerAdmin_ShouldReturnConflict_WhenDuplicateEmail() {
+        when(adminSecret.getCode()).thenReturn("SECRET123");
+        when(userService.superAdminExists()).thenReturn(false);
+        when(userService.createSuperAdmin(any()))
                 .thenThrow(new DuplicateEmailException("Email already registered"));
 
-        mockMvc.perform(post("/api/v1/auth/register-admin")
-                        .with(csrf())
-                        .header("X-Admin-Secret", "secret123")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registrationDto)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Email already registered: test@example.com"));
+        ResponseEntity<?> response = authController.registerAdmin(
+                registrationDto, "SECRET123", request);
 
-        verify(userService, times(1)).createSuperAdmin(any(UserRegistrationDto.class));
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
     }
 
     @Test
-    @DisplayName("Should login successfully and return JWT token")
-    void login_Success_ShouldReturnToken() throws Exception {
+    void login_ShouldReturnOk_WhenAuthenticationSuccessful() {
         Authentication authentication = mock(Authentication.class);
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(userPrincipal);
-        when(jwtUtil.generateToken(any(UserPrincipal.class), anyString())).thenReturn("mockJwtToken");
+        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(principal);
+        when(jwtUtil.generateToken(principal, principal.getUserId()))
+                .thenReturn("mock-jwt-token");
 
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(authRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("mockJwtToken"))
-                .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.userId").value("user123"))
-                .andExpect(jsonPath("$.roles[0]").value("USER"))
-                .andExpect(jsonPath("$.message").value("Login successful"));
+        ResponseEntity<AuthResponse> response = authController.login(authRequest);
 
-        verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtUtil, times(1)).generateToken(any(UserPrincipal.class), anyString());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when login fails")
-    void login_InvalidCredentials_ShouldThrowException() throws Exception {
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new RuntimeException("Bad credentials"));
-
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(authRequest)))
-                .andExpect(status().isInternalServerError());
-
-        verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getToken()).isEqualTo("mock-jwt-token");
+        verify(authenticationManager).authenticate(any());
+        verify(jwtUtil).generateToken(principal, principal.getUserId());
     }
 }

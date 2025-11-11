@@ -51,10 +51,14 @@ public class UserController {
     @PutMapping("/update/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
     @Operation(summary = "Update User Details", description = "Allows a Super Admin or the user themselves to update their information.")
-    public ResponseEntity<UserDto> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) {
+    public ResponseEntity<UserDto> updateUser(
+            @PathVariable String userId,
+            @Valid @RequestBody UserDto userDto
+    ) {
         UserDto updatedUser = userService.updateUser(userId, userDto);
         return ResponseEntity.ok(updatedUser);
     }
+
 
     @DeleteMapping("/delete/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
