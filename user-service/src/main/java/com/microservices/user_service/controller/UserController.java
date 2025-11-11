@@ -40,7 +40,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/{email}")
+    @GetMapping("/email/{email}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "To get the user details by email.Only Super-admin can access.")
     public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
@@ -48,15 +48,15 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @PutMapping("/{userId}")
+    @PutMapping("/update/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
-    @Operation(description = "To update a User.Super-admin and user itself can access only.")
+    @Operation(summary = "Update User Details", description = "Allows a Super Admin or the user themselves to update their information.")
     public ResponseEntity<UserDto> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) {
         UserDto updatedUser = userService.updateUser(userId, userDto);
         return ResponseEntity.ok(updatedUser);
     }
 
-    @DeleteMapping("/{userId}")
+    @DeleteMapping("/delete/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "Only Super-admin can delete a user.")
     public ResponseEntity<Void> deleteUser(@PathVariable String userId) {
