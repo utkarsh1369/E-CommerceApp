@@ -1,38 +1,52 @@
 package com.microservices.user_service.aspect;
 
 
-import org.aspectj.lang.JoinPoint;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+
 @Aspect
 @Component
+@Slf4j
 public class LoggingAspect {
 
-
-    @Before("execution(* com.microservices.user_service.service..*.*(..))")
-    public void beforeMethod(JoinPoint joinPoint) {
-        System.out.println("Before method: " + joinPoint.getSignature().getName());
-    }
-
-    @AfterReturning(pointcut = "execution(* com.microservices.user_service.service..*.*(..))", returning = "result")
-    public void afterReturning(JoinPoint joinPoint, Object result) {
-        System.out.println("After method: " + joinPoint.getSignature().getName() + ", Returned: " + result);
-    }
-
-    @AfterThrowing(pointcut = "execution(* com.microservices.user_service.service..*.*(..))", throwing = "error")
-    public void afterThrowing(JoinPoint joinPoint, Throwable error) {
-        System.out.println("Exception in method: " + joinPoint.getSignature().getName() + ", Message: " + error.getMessage());
-    }
-
     @Around("execution(* com.microservices.user_service.service..*.*(..))")
-    public Object aroundAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
-        long start = System.currentTimeMillis();
-        System.out.println("Around before: " + joinPoint.getSignature().getName());
-        Object result = joinPoint.proceed();
-        long end = System.currentTimeMillis();
-        System.out.println("Around after: " + joinPoint.getSignature().getName() + ", Execution Time: " + (end - start) + "ms");
-        return result;
+    public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
+        String methodName = joinPoint.getSignature().toShortString();
+        Object[] args = joinPoint.getArgs();
+        long startTime = System.currentTimeMillis();
+
+        log.info("Starting service method {} with args {}", methodName, Arrays.toString(args));
+        try {
+            Object result = joinPoint.proceed();
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Completed {} | Duration: {} ms", methodName, duration);
+            return result;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Failed {} | Duration: {} ms | Exception: {}", methodName, duration, e.getMessage());
+            throw e;
+        }
+    }
+
+    @Around("execution(* com.microservices.user_service.controller..*.*(..))")
+    public Object logAroundController(ProceedingJoinPoint joinPoint) throws Throwable {
+        String methodName = joinPoint.getSignature().toShortString();
+        long startTime = System.currentTimeMillis();
+
+        log.info("Starting API method {}", methodName);
+        try {
+            Object result = joinPoint.proceed();
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Completed API {} | Duration: {} ms", methodName, duration);
+            return result;
+        } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Failed API {} | Duration: {} ms | Exception: {}", methodName, duration, ex.getMessage());
+            throw ex;
+        }
     }
 }

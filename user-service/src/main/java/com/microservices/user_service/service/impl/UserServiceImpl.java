@@ -35,24 +35,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto registerUser(UserRegistrationDto registrationDto) {
-        log.info("Registering new user with email: {}", registrationDto.getEmail());
+
         if (userRepository.existsByEmail(registrationDto.getEmail())) {
             throw new DuplicateEmailException("Email already registered: " + registrationDto.getEmail());
         }
-
         String encodedPassword = passwordEncoder.encode(registrationDto.getPassword());
 
         Users user = userMapper.toEntity(registrationDto, encodedPassword);
         Users savedUser = userRepository.save(user);
 
-        log.info("User registered successfully with ID: {}", savedUser.getUserId());
         return userMapper.toDto(savedUser);
     }
 
     @Override
     @Transactional
     public UserDto createSuperAdmin(UserRegistrationDto registrationDto) {
-        log.info("Creating SUPER ADMIN with email: {}", registrationDto.getEmail());
 
         if (userRepository.existsByEmail(registrationDto.getEmail())) {
             throw new DuplicateEmailException("Email already registered: " + registrationDto.getEmail());
@@ -60,7 +57,6 @@ public class UserServiceImpl implements UserService {
         if (superAdminExists()) {
             throw new IllegalStateException("Super Admin already exists in the system");
         }
-
         String encodedPassword = passwordEncoder.encode(registrationDto.getPassword());
 
         Users superAdmin = Users.builder()
@@ -73,8 +69,6 @@ public class UserServiceImpl implements UserService {
                 .roles(Set.of(Role.SUPER_ADMIN))
                 .build();
         Users savedAdmin = userRepository.save(superAdmin);
-
-        log.info("🔐 SUPER ADMIN CREATED SUCCESSFULLY: {}", savedAdmin.getEmail());
 
         return userMapper.toDto(savedAdmin);
     }
@@ -89,7 +83,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserDto getUserById(String userId) {
-        log.info("Fetching user with ID: {}", userId);
 
         validateUserAccess(userId);
 
@@ -102,7 +95,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserDto getUserByEmail(String email) {
-        log.info("Fetching user with email: {}", email);
 
         Users user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
@@ -114,7 +106,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public List<UserDto> getAllUsers() {
-        log.info("Fetching all users");
 
         List<Users> users = userRepository.findAll();
         log.info("Found {} users", users.size());
@@ -125,7 +116,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto updateUser(String userId, UserDto userDto) {
-        log.info("Updating user with ID: {}", userId);
 
         validateUserAccess(userId);
 
@@ -141,22 +131,18 @@ public class UserServiceImpl implements UserService {
 
         userMapper.updateEntityFromDto(userDto, existingUser);
         Users updatedUser = userRepository.save(existingUser);
-
-        log.info("User updated successfully with ID: {}", userId);
         return userMapper.toDto(updatedUser);
     }
 
     @Override
     @Transactional
     public void deleteUser(String userId) {
-        log.info("Deleting user with ID: {}", userId);
 
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException("User not found with ID: " + userId);
         }
 
         userRepository.deleteById(userId);
-        log.info("User deleted successfully with ID: {}", userId);
     }
 
     @Override
@@ -170,7 +156,6 @@ public class UserServiceImpl implements UserService {
         user.setRoles(roles);
         Users updatedUser = userRepository.save(user);
 
-        log.info("Roles assigned successfully to user: {}", userId);
         return userMapper.toDto(updatedUser);
     }
 
@@ -188,7 +173,6 @@ public class UserServiceImpl implements UserService {
         if (currentUser.getRoles().contains(Role.SUPER_ADMIN)) {
             return;
         }
-
         if (!currentUserId.equals(requestedUserId)) {
             throw new UnauthorizedException("You don't have permission to access this user's data");
         }
