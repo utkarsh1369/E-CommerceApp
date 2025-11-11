@@ -9,8 +9,4 @@ import java.util.Optional;
 
 @Repository
 public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
-
-    Optional<Delivery> findByOrderId(Long orderId);
-
-    List<Delivery> findByUserId(java.util.UUID userId);
 }

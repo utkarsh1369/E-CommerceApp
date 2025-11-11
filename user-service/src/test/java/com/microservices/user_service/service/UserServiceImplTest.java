@@ -88,9 +88,7 @@ class UserServiceImplTest {
         when(userMapper.toEntity(any(UserRegistrationDto.class), anyString())).thenReturn(userEntity);
         when(userRepository.save(any(Users.class))).thenReturn(userEntity);
         when(userMapper.toDto(any(Users.class))).thenReturn(userDto);
-
         UserDto result = userService.registerUser(registrationDto);
-
         assertNotNull(result);
         assertEquals("john@example.com", result.getEmail());
         verify(userRepository).save(any(Users.class));
@@ -100,7 +98,6 @@ class UserServiceImplTest {
     @DisplayName("Should throw DuplicateEmailException when registering existing email")
     void registerUser_DuplicateEmail() {
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
-
         assertThrows(DuplicateEmailException.class,
                 () -> userService.registerUser(registrationDto));
         verify(userRepository, never()).save(any());
@@ -114,9 +111,7 @@ class UserServiceImplTest {
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPass");
         when(userRepository.save(any(Users.class))).thenReturn(userEntity);
         when(userMapper.toDto(any(Users.class))).thenReturn(userDto);
-
         UserDto result = userService.createSuperAdmin(registrationDto);
-
         assertNotNull(result);
         assertEquals("john@example.com", result.getEmail());
         verify(userRepository).save(any());
@@ -125,7 +120,7 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Should throw when super admin already exists")
     void createSuperAdmin_WhenAlreadyExists() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false); // Skip duplicate email branch
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
 
         Users existingAdmin = Users.builder()
                 .userId("admin1")
@@ -137,17 +132,18 @@ class UserServiceImplTest {
                 () -> userService.createSuperAdmin(registrationDto));
     }
 
-
     @Test
     @DisplayName("Should return user when found and authorized")
     void getUserById_Success() {
-        mockAuthenticatedUser(principal);
-
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(principal);
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(context);
         when(userRepository.findById(anyString())).thenReturn(Optional.of(userEntity));
         when(userMapper.toDto(any(Users.class))).thenReturn(userDto);
-
         UserDto result = userService.getUserById("user123");
-
         assertEquals("john@example.com", result.getEmail());
         verify(userRepository).findById("user123");
     }
@@ -159,14 +155,16 @@ class UserServiceImplTest {
                 .userId("other123")
                 .roles(Set.of(Role.USER))
                 .build();
-
-        mockAuthenticatedUser(otherUser);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(otherUser);
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(context);
         when(userRepository.findById("user123")).thenReturn(Optional.of(userEntity));
-
         assertThrows(UnauthorizedException.class,
                 () -> userService.getUserById("user123"));
     }
-
 
     @Test
     @DisplayName("Should throw when user not found")
@@ -175,28 +173,27 @@ class UserServiceImplTest {
         assertThrows(UserNotFoundException.class, () -> userService.getUserById("missing"));
     }
 
-
     @Test
     @DisplayName("Should update user email successfully")
     void updateUser_Success() {
-        mockAuthenticatedUser(principal);
-
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(principal);
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(context);
         Users existing = Users.builder()
                 .userId("user123")
                 .email("old@example.com")
                 .build();
-
         UserDto updateDto = UserDto.builder()
                 .email("new@example.com")
                 .build();
-
         when(userRepository.findById("user123")).thenReturn(Optional.of(existing));
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(userRepository.save(any())).thenReturn(existing);
         when(userMapper.toDto(any())).thenReturn(userDto);
-
         UserDto result = userService.updateUser("user123", updateDto);
-
         assertNotNull(result);
         verify(userRepository).save(any());
     }
@@ -204,17 +201,20 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Should throw DuplicateEmailException when updating with existing email")
     void updateUser_DuplicateEmail() {
-        mockAuthenticatedUser(principal);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(principal);
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(context);
         Users existing = Users.builder()
                 .userId("user123")
                 .email("old@example.com")
                 .build();
-
         UserDto updateDto = UserDto.builder().email("taken@example.com").build();
-
         when(userRepository.findById("user123")).thenReturn(Optional.of(existing));
         when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
-
         assertThrows(DuplicateEmailException.class,
                 () -> userService.updateUser("user123", updateDto));
     }
@@ -223,9 +223,7 @@ class UserServiceImplTest {
     @DisplayName("Should delete user successfully")
     void deleteUser_Success() {
         when(userRepository.existsById("user123")).thenReturn(true);
-
         userService.deleteUser("user123");
-
         verify(userRepository).deleteById("user123");
     }
 
@@ -233,7 +231,6 @@ class UserServiceImplTest {
     @DisplayName("Should throw when deleting non-existent user")
     void deleteUser_NotFound() {
         when(userRepository.existsById("missing")).thenReturn(false);
-
         assertThrows(UserNotFoundException.class,
                 () -> userService.deleteUser("missing"));
     }
@@ -244,22 +241,8 @@ class UserServiceImplTest {
         when(userRepository.findById("user123")).thenReturn(Optional.of(userEntity));
         when(userRepository.save(any())).thenReturn(userEntity);
         when(userMapper.toDto(any())).thenReturn(userDto);
-
         UserDto result = userService.assignRoles("user123", Set.of(Role.SUPER_ADMIN));
-
         assertNotNull(result);
         verify(userRepository).save(any());
-    }
-
-    // Helper for mocking SecurityContext
-    private void mockAuthenticatedUser(UserPrincipal principal) {
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getPrincipal()).thenReturn(principal);
-
-        SecurityContext context = mock(SecurityContext.class);
-        when(context.getAuthentication()).thenReturn(authentication);
-
-        SecurityContextHolder.setContext(context);
     }
 }

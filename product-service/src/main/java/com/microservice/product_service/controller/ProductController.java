@@ -28,7 +28,7 @@ public class ProductController {
     }
 
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN')")
-    @PutMapping("/{productId}")
+    @PutMapping("/update/{productId}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable Long productId,
             @Valid @RequestBody ProductDTO productDTO) {
@@ -51,7 +51,7 @@ public class ProductController {
     }
 
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN')")
-    @DeleteMapping("/{productId}")
+    @DeleteMapping("/delete/{productId}")
     public ResponseEntity<Void> deleteProductById(@PathVariable Long productId) {
         productService.deleteProductById(productId);
         return ResponseEntity.noContent().build();
