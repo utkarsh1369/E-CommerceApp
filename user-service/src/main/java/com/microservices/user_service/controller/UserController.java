@@ -48,7 +48,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @PutMapping("/update/{userId}")
+    @PutMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or @userSecurityService.isCurrentUser(#userId)")
     @Operation(description = "To update a User.Super-admin and user itself can access only.")
     public ResponseEntity<UserDto> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) {
@@ -56,7 +56,7 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    @DeleteMapping("/delete/{userId}")
+    @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(description = "Only Super-admin can delete a user.")
     public ResponseEntity<Void> deleteUser(@PathVariable String userId) {

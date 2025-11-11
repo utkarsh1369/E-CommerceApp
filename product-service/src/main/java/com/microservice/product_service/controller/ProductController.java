@@ -23,7 +23,6 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN')")
     @PostMapping("/add")
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDTO) {
-        log.info("REST request to create product: {}", productDTO.getProductName());
         ProductDTO createdProduct = productService.createProduct(productDTO);
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
@@ -33,7 +32,6 @@ public class ProductController {
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable Long productId,
             @Valid @RequestBody ProductDTO productDTO) {
-        log.info("REST request to update product with ID: {}", productId);
         ProductDTO updatedProduct = productService.updateProduct(productId, productDTO);
         return ResponseEntity.ok(updatedProduct);
     }
@@ -41,7 +39,6 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN', 'USER','ORDER_ADMIN')")
     @GetMapping
     public ResponseEntity<List<ProductDTO>> getAllProducts() {
-        log.info("REST request to get all products");
         List<ProductDTO> products = productService.getAllProducts();
         return ResponseEntity.ok(products);
     }
@@ -49,7 +46,6 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN', 'USER','ORDER_ADMIN')")
     @GetMapping("/{productId}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long productId) {
-        log.info("REST request to get product with ID: {}", productId);
         ProductDTO product = productService.getProductById(productId);
         return ResponseEntity.ok(product);
     }
@@ -57,7 +53,6 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN')")
     @DeleteMapping("/{productId}")
     public ResponseEntity<Void> deleteProductById(@PathVariable Long productId) {
-        log.info("REST request to delete product with ID: {}", productId);
         productService.deleteProductById(productId);
         return ResponseEntity.noContent().build();
     }

@@ -25,24 +25,20 @@ public class OrderController {
     @PreAuthorize("hasRole('USER')")
     @PostMapping
     public ResponseEntity<OrderResponseDto> createOrder(@Valid @RequestBody OrderRequestDto orderRequestDto) {
-        log.info("REST request to create order for user: {}", orderRequestDto.getUserId());
         OrderResponseDto createdOrder = orderService.createOrder(orderRequestDto);
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasRole('USER')")
     @PutMapping("/{orderId}")
-    public ResponseEntity<OrderResponseDto> updateOrder(
-            @PathVariable Long orderId, @Valid @RequestBody OrderRequestDto orderRequestDto) {
-        log.info("REST request to update order with ID: {}", orderId);
+    public ResponseEntity<OrderResponseDto> updateOrder(@PathVariable Long orderId, @Valid @RequestBody OrderRequestDto orderRequestDto) {
         OrderResponseDto updatedOrder = orderService.updateOrder(orderId, orderRequestDto);
         return ResponseEntity.ok(updatedOrder);
     }
 
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN')")
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<List<OrderResponseDto>> findAllOrders() {
-        log.info("REST request to get all orders");
         List<OrderResponseDto> orders = orderService.findAllOrders();
         return ResponseEntity.ok(orders);
     }
@@ -50,7 +46,6 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN') or @orderSecurityService.isOrderOwner(#orderId)")
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponseDto> findOrderById(@PathVariable Long orderId) {
-        log.info("REST request to get order with ID: {}", orderId);
         OrderResponseDto order = orderService.findOrderById(orderId);
         return ResponseEntity.ok(order);
     }
