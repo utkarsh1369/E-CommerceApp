@@ -1,4 +1,4 @@
-package com.microservices.user_service.aspect;
+package com.microservices.order_service.aspect;
 
 
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import java.util.Arrays;
 @Slf4j
 public class LoggingAspect {
 
-    @Around("execution(* com.microservices.user_service.service..*.*(..))")
+    @Around("execution(* com.microservices.order_service.service..*.*(..))")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
@@ -33,7 +33,7 @@ public class LoggingAspect {
         }
     }
 
-    @Around("execution(* com.microservices.user_service.controller..*.*(..))")
+    @Around("execution(* com.microservices.order_service.controller..*.*(..))")
     public Object logAroundController(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
         long startTime = System.currentTimeMillis();
