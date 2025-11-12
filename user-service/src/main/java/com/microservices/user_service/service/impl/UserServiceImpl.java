@@ -104,12 +104,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public List<UserDto> getAllUsers() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new UnauthorizedException("Unauthorized access");
+        }
+
+        if (!principal.getRoles().contains(Role.SUPER_ADMIN)) {
+            throw new UnauthorizedException("Only SUPER_ADMIN can access all users");
+        }
 
         List<Users> users = userRepository.findAll();
         log.info("Found {} users", users.size());
 
         return userMapper.toDtoList(users);
     }
+
 
     @Override
     @Transactional
@@ -135,13 +144,20 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(String userId) {
-
-        if (!userRepository.existsById(userId)) {
-            throw new UserNotFoundException("User not found with ID: " + userId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new UnauthorizedException("Unauthorized access");
         }
-
+        if (!principal.getUserId().equals(userId) && !principal.getRoles().contains(Role.SUPER_ADMIN)) {
+            throw new UnauthorizedException("Only SUPER_ADMIN or the user themselves can delete this account");
+        }
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException("User not found with id: " + userId);
+        }
         userRepository.deleteById(userId);
+        log.info("Deleted user with id: {}", userId);
     }
+
 
     @Override
     @Transactional

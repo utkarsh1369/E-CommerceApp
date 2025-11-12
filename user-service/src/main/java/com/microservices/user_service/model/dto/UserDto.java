@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -33,7 +34,7 @@ public class UserDto {
     @NotBlank(message = "Address cannot be blank")
     private String address;
 
-    private Set<Role> roles;
+    private Set<Role> roles= new HashSet<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -20,7 +20,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class AuthControllerTest {
+class AuthControllerUnitTest {
 
     @Mock
     private AuthenticationManager authenticationManager;

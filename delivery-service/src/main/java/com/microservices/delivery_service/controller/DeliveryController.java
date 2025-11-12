@@ -31,7 +31,7 @@ public class DeliveryController {
     }
 
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'DELIVERY_ADMIN')")
-    @PatchMapping("/{deliveryId}/status")
+    @PatchMapping("/{deliveryId}/update-status")
     public ResponseEntity<DeliveryDto> updateDeliveryStatus(@PathVariable Long deliveryId, @Valid @RequestBody UpdateDeliveryStatusDto statusDto) {
         DeliveryDto updatedDelivery = deliveryService.updateDeliveryStatus(deliveryId, statusDto);
         return ResponseEntity.ok(updatedDelivery);

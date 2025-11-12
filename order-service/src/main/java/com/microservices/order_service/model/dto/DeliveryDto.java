@@ -3,6 +3,7 @@ package com.microservices.order_service.model.dto;
 import com.microservices.order_service.model.Status;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,5 +20,5 @@ public class DeliveryDto {
     private Status status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private LocalDateTime expectedDeliveryDate;
+    private LocalDate expectedDeliveryDate;
 }

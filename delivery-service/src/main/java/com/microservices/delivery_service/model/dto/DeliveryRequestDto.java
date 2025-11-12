@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -14,7 +13,7 @@ import java.util.UUID;
 public class DeliveryRequestDto {
 
     @NotNull(message = "User ID is required")
-    private UUID userId;
+    private String userId;
 
     @NotNull(message = "Order ID is required")
     private Long orderId;
