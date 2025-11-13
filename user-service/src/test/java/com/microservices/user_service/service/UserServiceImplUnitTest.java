@@ -26,15 +26,21 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceImplTest {
+class UserServiceImplUnitTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private UserMapper userMapper;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private Authentication authentication;
-    @Mock private SecurityContext securityContext;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private Authentication authentication;
+    @Mock
+    private SecurityContext securityContext;
 
-    @InjectMocks private UserServiceImpl userService;
+    @InjectMocks
+    private UserServiceImpl userService;
 
     private UserRegistrationDto registrationDto;
     private Users userEntity;
@@ -369,6 +375,85 @@ class UserServiceImplTest {
         assertThrows(UnauthorizedException.class, () -> invokeValidate("other"));
     }
 
+    /* ------------ superAdminExists (Branch 1) ------------ */
+
+    @Test
+    void superAdminExists_false_nullRoles() {
+        // Covers the 'user.getRoles() != null' check in the stream
+        Users userWithNullRoles = Users.builder().roles(null).build();
+        when(userRepository.findAll()).thenReturn(List.of(userWithNullRoles));
+        assertFalse(userService.superAdminExists());
+    }
+
+
+    /* ------------ updateUser (Branches 2 & 3) ------------ */
+
+    @Test
+    void updateUser_success_emailIsNull() {
+        // Covers the branch where 'userDto.getEmail() != null' is false
+        mockAuth(userPrincipal);
+        Users existing = Users.builder().userId("u1").email("old@a.com").build();
+        UserDto dtoWithNullEmail = UserDto.builder().email(null).name("New Name").build();
+
+        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
+        when(userRepository.save(existing)).thenReturn(existing);
+
+        userService.updateUser("u1", dtoWithNullEmail);
+
+        // Verify that 'existsByEmail' was never called because the email was null
+        verify(userRepository, never()).existsByEmail(any());
+        verify(userRepository).save(existing);
+    }
+
+    @Test
+    void updateUser_success_emailIsSame() {
+        // Covers the branch where '!userDto.getEmail().equals(existingUser.getEmail())' is false
+        mockAuth(userPrincipal);
+        Users existing = Users.builder().userId("u1").email("john@example.com").build();
+        UserDto dtoWithSameEmail = UserDto.builder().email("john@example.com").name("New Name").build();
+
+        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
+        when(userRepository.save(existing)).thenReturn(existing);
+
+        userService.updateUser("u1", dtoWithSameEmail);
+
+        // Verify that 'existsByEmail' was never called because the email was the same
+        verify(userRepository, never()).existsByEmail(any());
+        verify(userRepository).save(existing);
+    }
+
+
+    /* ------------ validateUserAccess (Branches 4 & 5) ------------ */
+
+    @Test
+    void validateUserAccess_nullAuthentication() {
+        // Covers the 'authentication == null' branch
+        when(securityContext.getAuthentication()).thenReturn(null);
+        SecurityContextHolder.setContext(securityContext);
+
+        assertThrows(UnauthorizedException.class,
+                () -> invokeValidate("x"));
+    }
+
+    @Test
+    void validateUserAccess_invalidPrincipalType() {
+        // Covers the '!(authentication.getPrincipal() instanceof UserPrincipal)' branch
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn("a_random_string"); // Not a UserPrincipal
+        SecurityContextHolder.setContext(securityContext);
+
+        assertThrows(UnauthorizedException.class,
+                () -> invokeValidate("x"));
+    }
+
+    @Test
+    void deleteUser_noAuth() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+        SecurityContextHolder.setContext(securityContext);
+        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
+    }
+
     /* ------------ helper ------------ */
     private void mockAuth(UserPrincipal principal) {
         lenient().when(authentication.isAuthenticated()).thenReturn(true);
@@ -386,6 +471,24 @@ class UserServiceImplTest {
             m.invoke(userService, id);
         } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException re) throw re;
+        }
+    }
+
+
+    private void validateUserAccess(String requestedUserId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserPrincipal currentUser)) {
+            throw new UnauthorizedException("User not authenticated or invalid principal");
+        }
+
+        String currentUserId = currentUser.getUserId();
+
+        if (currentUser.getRoles().contains(Role.SUPER_ADMIN)) {
+            return;
+        }
+        if (!currentUserId.equals(requestedUserId)) {
+            throw new UnauthorizedException("You don't have permission to access this user's data");
         }
     }
 }

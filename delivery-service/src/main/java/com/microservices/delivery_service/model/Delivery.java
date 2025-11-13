@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -40,7 +41,7 @@ public class Delivery {
     private LocalDateTime updatedAt;
 
     @Column(name = "expected_delivery_date")
-    private LocalDateTime expectedDeliveryDate;
+    private LocalDate expectedDeliveryDate;
 
     @PrePersist
     public void prePersist() {
@@ -49,7 +50,7 @@ public class Delivery {
         }
         // Set expected delivery date to 5 days from now if not provided
         if (expectedDeliveryDate == null) {
-            expectedDeliveryDate = LocalDateTime.now().plusDays(5);
+            expectedDeliveryDate = LocalDate.now().plusDays(5);
         }
     }
 }

@@ -44,7 +44,7 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveries);
     }
 
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'DELIVERY_ADMIN') or @DeliverySecurityService.isDeliveryOwner(#deliveryId)")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'DELIVERY_ADMIN') or @deliverySecurityService.isDeliveryOwner(#deliveryId)")
     @GetMapping("/{deliveryId}")
     public ResponseEntity<DeliveryDto> getDeliveryById(@PathVariable Long deliveryId) {
         DeliveryDto delivery = deliveryService.findDeliveryById(deliveryId);

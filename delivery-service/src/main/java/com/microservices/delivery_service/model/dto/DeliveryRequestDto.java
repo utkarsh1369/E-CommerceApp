@@ -3,7 +3,7 @@ package com.microservices.delivery_service.model.dto;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -18,5 +18,5 @@ public class DeliveryRequestDto {
     @NotNull(message = "Order ID is required")
     private Long orderId;
 
-    private LocalDateTime expectedDeliveryDate;
+    private LocalDate expectedDeliveryDate;
 }

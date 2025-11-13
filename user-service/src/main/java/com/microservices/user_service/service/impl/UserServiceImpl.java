@@ -173,15 +173,11 @@ public class UserServiceImpl implements UserService {
         return userMapper.toDto(updatedUser);
     }
 
-
     private void validateUserAccess(String requestedUserId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new UnauthorizedException("User not authenticated");
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserPrincipal currentUser)) {
+            throw new UnauthorizedException("User not authenticated or invalid principal");
         }
-
-        UserPrincipal currentUser = (UserPrincipal) authentication.getPrincipal();
         String currentUserId = currentUser.getUserId();
 
         if (currentUser.getRoles().contains(Role.SUPER_ADMIN)) {
