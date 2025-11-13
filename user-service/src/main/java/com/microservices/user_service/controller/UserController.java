@@ -137,7 +137,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/assign-role/{userId}")
+    @PatchMapping("/assign-role/{userId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "To assign different Roles to user",description = "Super-admin can assign roles to different users.")
     @ApiResponses(value = {
