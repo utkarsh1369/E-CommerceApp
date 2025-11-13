@@ -7,6 +7,12 @@ import com.microservices.user_service.model.UserPrincipal;
 import com.microservices.user_service.service.UserService;
 import com.microservices.user_service.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -31,14 +37,48 @@ public class AuthController {
 
 
     @PostMapping("/register-user")
-    @Operation(description = "To register a new user.")
-    public ResponseEntity<UserDto> register(@Valid @RequestBody UserRegistrationDto registrationDto) {
+    @Operation(summary = "Register new User", description = "Creates a new User in Database.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201",
+                    description = "Created USER",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UserDto.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Bad Request (Invalid Input)", content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "409", description = "Email already in use", content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    })
+    public ResponseEntity<UserDto> register(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "User Registration Details",required = true)
+                                                @Valid @RequestBody UserRegistrationDto registrationDto) {
         UserDto userDto = userService.registerUser(registrationDto);
         return new ResponseEntity<>(userDto, HttpStatus.CREATED);
     }
 
     @PostMapping("/register-admin")
-    public ResponseEntity<?> registerAdmin(@Valid @RequestBody UserRegistrationDto registrationDto, @RequestHeader("X-Admin-Secret") String providedSecretCode, HttpServletRequest request) {
+    @Operation(summary = "Create a SUPER_ADMIN", description = "It creates a SUPER_ADMIN in Database only if there is no existing SUPER_ADMIN.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201",
+                    description = "SUPER_ADMIN Created",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = SuccessMessage.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Bad Request (Invalid Input)", content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "403", description = "Invalid admin secret code", content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "409", description = "Email already registered", content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "410", description = "Super Admin already exists", content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    })
+    public ResponseEntity<?> registerAdmin(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Admin Registration Details",required = true) @Valid @RequestBody UserRegistrationDto registrationDto,
+                                           @Parameter(
+                                                   description = "enter the already defined Admin Secret.",
+                                                   required = true,
+                                                   in = ParameterIn.HEADER,
+                                                   example = "your-secret-key-123")
+                                           @RequestHeader("X-Admin-Secret") String providedSecretCode) {
         if (!adminSecret.getCode().equals(providedSecretCode)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorMessage("Invalid admin secret code"));
         }
@@ -61,9 +101,20 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(description = "To login using email and password.")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest authRequest) {
-        try {
+    @Operation(summary = "Login as a USER or ADMIN", description = "To login using email and password.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Login Successful",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Bad Request (Invalid Input)", content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized (Invalid email or password)", content = @Content(schema = @Schema(implementation = AuthResponse.class)))
+    })
+    public ResponseEntity<AuthResponse> login(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Login Using email and password.",required = true) @Valid @RequestBody AuthRequest authRequest) {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             authRequest.getEmail(),
@@ -82,8 +133,5 @@ public class AuthController {
                     .message("Login successful")
                     .build();
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw e;
-        }
     }
 }

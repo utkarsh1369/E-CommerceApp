@@ -7,8 +7,11 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 @OpenAPIDefinition(tags = {
@@ -26,6 +29,11 @@ public class SwaggerConfig {
                                     .scheme("bearer")
                                     .bearerFormat("JWT")
                                     .in(SecurityScheme.In.HEADER)
-                                    .name("Authorization")));
+                                    .name("Authorization"))
+            ).servers(
+                    List.of(
+                            new Server().url("http://localhost:8081").description("Local server"),
+                            new Server().url("http://localhost:8085").description("Gateway server")
+                    ));
         }
 }

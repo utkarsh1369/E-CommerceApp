@@ -92,11 +92,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDto getUserByEmail(String email) {
+    public UserDto getUserByEmail(String requestedEmail) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        Users user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
-        validateUserAccess(user.getUserId());
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal currentUser) {
+
+            if (!currentUser.isAdmin() && !currentUser.getEmail().equals(requestedEmail)) {
+                throw new UnauthorizedException("Access denied");
+            }
+        } else {
+            throw new UnauthorizedException("User not authenticated");
+        }
+        Users user = userRepository.findByEmail(requestedEmail)
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + requestedEmail));
 
         return userMapper.toDto(user);
     }
@@ -129,14 +137,15 @@ public class UserServiceImpl implements UserService {
         Users existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
-        if (userDto.getEmail() != null && !userDto.getEmail().equals(existingUser.getEmail())) {
+        userMapper.updateEntityFromDto(userDto, existingUser);
+
+        if (userDto.getEmail() != null && !userDto.getEmail().equalsIgnoreCase(existingUser.getEmail())) {
             if (userRepository.existsByEmail(userDto.getEmail())) {
                 throw new DuplicateEmailException("Email already in use: " + userDto.getEmail());
             }
             existingUser.setEmail(userDto.getEmail());
         }
 
-        userMapper.updateEntityFromDto(userDto, existingUser);
         Users updatedUser = userRepository.save(existingUser);
         return userMapper.toDto(updatedUser);
     }

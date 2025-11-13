@@ -6,7 +6,6 @@ import com.microservices.user_service.model.Role;
 import com.microservices.user_service.model.Users;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,12 +16,6 @@ public class UserMapper {
         if (user == null) {
             return null;
         }
-
-        if (user.getCreatedAt() == null) {
-            user.setCreatedAt(LocalDateTime.now());
-        }
-        user.setUpdatedAt(LocalDateTime.now());
-
         return UserDto.builder()
                 .userId(user.getUserId())
                 .name(user.getName())
@@ -57,7 +50,6 @@ public class UserMapper {
         if (dto == null || user == null) {
             return;
         }
-
         if (dto.getName() != null) {
             user.setName(dto.getName());
         }
