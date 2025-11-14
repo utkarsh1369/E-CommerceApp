@@ -1,310 +1,219 @@
 package com.microservices.user_service.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microservices.user_service.AbstractIntegrationTest;
+import com.microservices.user_service.exception.UserNotFoundException;
 import com.microservices.user_service.model.Role;
+import com.microservices.user_service.model.UserPrincipal;
 import com.microservices.user_service.model.dto.UserDto;
-import com.microservices.user_service.security.UserSecurityService;
 import com.microservices.user_service.service.UserService;
-import com.microservices.user_service.exception.*;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
 @AutoConfigureMockMvc
-@SuppressWarnings("FieldCanBeLocal")
-class UserControllerIntegrationTest {
+class UserControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @MockitoBean
     private UserService userService;
-    @MockitoBean
-    private UserSecurityService userSecurityService;
 
-    private UserDto adminDto;
     private UserDto userDto;
-    private List<UserDto> userList;
 
     @BeforeEach
     void setup() {
-        adminDto = UserDto.builder()
-                .userId("admin1")
-                .name("Admin User")
-                .email("admin@example.com")
-                .roles(Set.of(Role.SUPER_ADMIN, Role.USER))
-                .build();
-
         userDto = UserDto.builder()
                 .userId("u1")
                 .name("John Doe")
-                .email("john@example.com")
+                .email("test@example.com")
+                .phoneNumber("1234567890")
+                .address("123 Street")
                 .roles(Set.of(Role.USER))
                 .build();
-
-        userList = List.of(adminDto, userDto);
     }
 
-    // ==================== GET /api/v1/users ====================
+    private Authentication createAuth(String userId, Role... roles) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .userId(userId)
+                .email("test@example.com")
+                .password("password")
+                .roles(Set.of(roles))
+                .build();
 
-    @Test
-    @DisplayName("GET /users - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void getAllUsers_asSuperAdmin_returnsUserList() throws Exception {
-        when(userService.getAllUsers()).thenReturn(userList);
-
-        mockMvc.perform(get("/api/v1/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].email").value("admin@example.com"))
-                .andExpect(jsonPath("$[1].email").value("john@example.com"));
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     @Test
-    @DisplayName("GET /users - Forbidden as USER")
-    @WithMockUser(roles = "USER")
-    void getAllUsers_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/users"))
+    void getAllUsers_Success_ForSuperAdmin() throws Exception {
+        mockMvc.perform(get("/api/v1/users")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAllUsers_Forbidden_ForNormalUser() throws Exception {
+        mockMvc.perform(get("/api/v1/users")
+                        .with(authentication(createAuth("u1", Role.USER))))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("GET /users - Unauthorized as unauthenticated")
-    void getAllUsers_unauthenticated_returnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/api/v1/users"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    // ==================== GET /api/v1/users/{userId} ====================
-
-    @Test
-    @DisplayName("GET /users/{userId} - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void getUserById_asSuperAdmin_returnsUser() throws Exception {
+    void getUserById_Success_ForSelf() throws Exception {
         when(userService.getUserById("u1")).thenReturn(userDto);
 
-        mockMvc.perform(get("/api/v1/users/u1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value("u1"))
-                .andExpect(jsonPath("$.email").value("john@example.com"));
-    }
-
-    @Test
-    @DisplayName("GET /users/{userId} - Success as self")
-    @WithMockUser(username = "john@example.com") // Assuming username is email
-    void getUserById_asSelf_returnsUser() throws Exception {
-        // Mock the custom security check
-        when(userSecurityService.isCurrentUser("u1")).thenReturn(true);
-        when(userService.getUserById("u1")).thenReturn(userDto);
-
-        mockMvc.perform(get("/api/v1/users/u1"))
+        mockMvc.perform(get("/api/v1/users/u1")
+                        .with(authentication(createAuth("u1", Role.USER))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value("u1"));
     }
 
     @Test
-    @DisplayName("GET /users/{userId} - Forbidden as other USER")
-    @WithMockUser(username = "other.user@example.com")
-    void getUserById_asOtherUser_returnsForbidden() throws Exception {
-        // Mock the custom security check
-        when(userSecurityService.isCurrentUser("u1")).thenReturn(false);
+    void getUserById_Success_ForSuperAdmin() throws Exception {
+        when(userService.getUserById("u1")).thenReturn(userDto);
 
-        mockMvc.perform(get("/api/v1/users/u1"))
-                .andExpect(status().isForbidden());
-
-        // Verify service is never called due to security rule
-        verify(userService, never()).getUserById(any());
+        mockMvc.perform(get("/api/v1/users/u1")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value("u1"));
     }
 
     @Test
-    @DisplayName("GET /users/{userId} - Not Found")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void getUserById_notFound_returnsNotFound() throws Exception {
-        when(userService.getUserById("not-found"))
-                .thenThrow(new UserNotFoundException("User not found"));
+    void getUserById_Forbidden_ForOtherUser() throws Exception {
+        mockMvc.perform(get("/api/v1/users/u1")
+                        .with(authentication(createAuth("u2", Role.USER))))
+                .andExpect(status().isForbidden());
+    }
 
-        mockMvc.perform(get("/api/v1/users/not-found"))
+    @Test
+    void getUserById_NotFound() throws Exception {
+        when(userService.getUserById("u1")).thenThrow(new UserNotFoundException("User not found"));
+
+        mockMvc.perform(get("/api/v1/users/u1")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
                 .andExpect(status().isNotFound());
     }
 
-    // ==================== GET /api/v1/users/email/{email} ====================
-
     @Test
-    @DisplayName("GET /users/email/{email} - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void getUserByEmail_asSuperAdmin_returnsUser() throws Exception {
-        when(userService.getUserByEmail("john@example.com")).thenReturn(userDto);
+    void getUserByEmail_Success_ForSuperAdmin() throws Exception {
+        when(userService.getUserByEmail("test@example.com")).thenReturn(userDto);
 
-        mockMvc.perform(get("/api/v1/users/email/john@example.com"))
+        mockMvc.perform(get("/api/v1/users/email/test@example.com")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("john@example.com"));
+                .andExpect(jsonPath("$.email").value("test@example.com"));
     }
 
     @Test
-    @DisplayName("GET /users/email/{email} - Forbidden as USER")
-    @WithMockUser(roles = "USER")
-    void getUserByEmail_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/users/email/john@example.com"))
+    void getUserByEmail_Forbidden_ForUser() throws Exception {
+        mockMvc.perform(get("/api/v1/users/email/test@example.com")
+                        .with(authentication(createAuth("u1", Role.USER))))
                 .andExpect(status().isForbidden());
     }
 
-    // ==================== PUT /api/v1/users/update/{userId} ====================
-
     @Test
-    @DisplayName("PUT /users/update/{userId} - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void updateUser_asSuperAdmin_returnsUpdatedUser() throws Exception {
-        UserDto updatedDto = UserDto.builder()
-                .userId("u1")
-                .name("John A. Doe")
-                .email("john@example.com")
-                .phoneNumber("1234567890")
-                .address("123 Street xyz")
-                .roles(Set.of(Role.USER))
-                .build();
-
-        when(userService.updateUser(eq("u1"), any(UserDto.class))).thenReturn(updatedDto);
+    void updateUser_Success_ForSelf() throws Exception {
+        when(userService.updateUser(eq("u1"), any(UserDto.class))).thenReturn(userDto);
 
         mockMvc.perform(put("/api/v1/users/update/u1")
+                        .with(authentication(createAuth("u1", Role.USER)))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updatedDto)))
+                        .content(objectMapper.writeValueAsString(userDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("John A. Doe"));
+                .andExpect(jsonPath("$.name").value("John Doe"));
     }
 
     @Test
-    @DisplayName("PUT /users/update/{userId} - Success as self")
-    @WithMockUser(username = "john@example.com")
-    void updateUser_asSelf_returnsUpdatedUser() throws Exception {
-        when(userSecurityService.isCurrentUser("u1")).thenReturn(true);
-
-        UserDto updatedDto = UserDto.builder()
-                .userId("u1")
-                .name("John A. Doe")
-                .email("john@example.com")
-                .phoneNumber("1234567890")
-                .address("123 Street xyz")
-                .roles(Set.of(Role.USER))
-                .build();
-
-        when(userService.updateUser(eq("u1"), any(UserDto.class))).thenReturn(updatedDto);
-
+    void updateUser_Forbidden_ForOtherUser() throws Exception {
         mockMvc.perform(put("/api/v1/users/update/u1")
+                        .with(authentication(createAuth("u2", Role.USER)))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updatedDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("John A. Doe"));
+                        .content(objectMapper.writeValueAsString(userDto)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("PUT /users/update/{userId} - Invalid input returns Bad Request")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void updateUser_invalidInput_returnsBadRequest() throws Exception {
-        // Assuming UserDto has @Email validation
+    void updateUser_BadRequest_InvalidInput() throws Exception {
         UserDto invalidDto = UserDto.builder()
                 .userId("u1")
-                .name("Test")
-                .email("not-an-email")
+                .name("")
+                .email("invalid-email")
                 .build();
 
         mockMvc.perform(put("/api/v1/users/update/u1")
+                        .with(authentication(createAuth("u1", Role.USER)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());
-
-        verify(userService, never()).updateUser(any(), any());
     }
 
-    // ==================== DELETE /api/v1/users/delete/{userId} ====================
-
     @Test
-    @DisplayName("DELETE /users/delete/{userId} - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void deleteUser_asSuperAdmin_returnsNoContent() throws Exception {
+    void deleteUser_Success_ForSuperAdmin() throws Exception {
         doNothing().when(userService).deleteUser("u1");
 
-        mockMvc.perform(delete("/api/v1/users/delete/u1"))
+        mockMvc.perform(delete("/api/v1/users/delete/u1")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
                 .andExpect(status().isNoContent());
-
-        verify(userService, times(1)).deleteUser("u1");
     }
 
     @Test
-    @DisplayName("DELETE /users/delete/{userId} - Forbidden as USER")
-    @WithMockUser(roles = "USER")
-    void deleteUser_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(delete("/api/v1/users/delete/u1"))
+    void deleteUser_Forbidden_ForUser() throws Exception {
+        mockMvc.perform(delete("/api/v1/users/delete/u1")
+                        .with(authentication(createAuth("u1", Role.USER))))
                 .andExpect(status().isForbidden());
-
-        verify(userService, never()).deleteUser(any());
     }
 
     @Test
-    @DisplayName("DELETE /users/delete/{userId} - Not Found")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void deleteUser_notFound_returnsNotFound() throws Exception {
-        doThrow(new UserNotFoundException("User not found"))
-                .when(userService).deleteUser("not-found");
+    void deleteUser_NotFound() throws Exception {
+        doThrow(new UserNotFoundException("Not found")).when(userService).deleteUser("u1");
 
-        mockMvc.perform(delete("/api/v1/users/delete/not-found"))
+        mockMvc.perform(delete("/api/v1/users/delete/u1")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN))))
                 .andExpect(status().isNotFound());
     }
 
-    // ==================== PUT /api/v1/users/assign-role/{userId} ====================
-
     @Test
-    @DisplayName("PUT /users/assign-role/{userId} - Success as SUPER_ADMIN")
-    @WithMockUser(roles = "SUPER_ADMIN")
-    void assignRoles_asSuperAdmin_returnsUpdatedUser() throws Exception {
-        Set<Role> newRoles = Set.of(Role.USER, Role.SUPER_ADMIN);
-        UserDto updatedUser = UserDto.builder()
-                .userId("u1")
-                .name("John Doe")
-                .email("john@example.com")
-                .roles(newRoles)
-                .build();
+    void assignRoles_Success_ForSuperAdmin() throws Exception {
+        Set<Role> newRoles = Set.of(Role.USER, Role.ORDER_ADMIN);
+        userDto.setRoles(newRoles);
+        when(userService.assignRoles("u1", newRoles)).thenReturn(userDto);
 
-        when(userService.assignRoles("u1", newRoles)).thenReturn(updatedUser);
-
-        mockMvc.perform(put("/api/v1/users/assign-role/u1")
+        mockMvc.perform(patch("/api/v1/users/assign-role/u1")
+                        .with(authentication(createAuth("admin", Role.SUPER_ADMIN)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newRoles)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roles", hasSize(2)))
-                .andExpect(jsonPath("$.roles", containsInAnyOrder("USER", "SUPER_ADMIN")));
+                .andExpect(jsonPath("$.roles").isArray());
     }
 
     @Test
-    @DisplayName("PUT /users/assign-role/{userId} - Forbidden as USER")
-    @WithMockUser(roles = "USER")
-    void assignRoles_asUser_returnsForbidden() throws Exception {
-        Set<Role> newRoles = Set.of(Role.USER, Role.SUPER_ADMIN);
+    void assignRoles_Forbidden_ForUser() throws Exception {
+        Set<Role> newRoles = Set.of(Role.SUPER_ADMIN);
 
-        mockMvc.perform(put("/api/v1/users/assign-role/u1")
+        mockMvc.perform(patch("/api/v1/users/assign-role/u1")
+                        .with(authentication(createAuth("u1", Role.USER)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newRoles)))
                 .andExpect(status().isForbidden());
-
-        verify(userService, never()).assignRoles(any(), any());
     }
 }

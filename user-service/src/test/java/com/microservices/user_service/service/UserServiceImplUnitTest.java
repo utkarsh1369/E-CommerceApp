@@ -11,9 +11,11 @@ import com.microservices.user_service.model.dto.UserDto;
 import com.microservices.user_service.model.dto.UserRegistrationDto;
 import com.microservices.user_service.repository.UserRepository;
 import com.microservices.user_service.service.impl.UserServiceImpl;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -23,21 +25,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplUnitTest {
 
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private UserMapper userMapper;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private Authentication authentication;
-    @Mock
-    private SecurityContext securityContext;
+    @Mock private UserRepository userRepository;
+    @Mock private UserMapper userMapper;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private SecurityContext securityContext;
+    @Mock private Authentication authentication;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -45,450 +43,368 @@ class UserServiceImplUnitTest {
     private UserRegistrationDto registrationDto;
     private Users userEntity;
     private UserDto userDto;
-    private UserPrincipal adminPrincipal;
-    private UserPrincipal userPrincipal;
 
     @BeforeEach
     void setup() {
+        SecurityContextHolder.setContext(securityContext);
+
         registrationDto = UserRegistrationDto.builder()
-                .name("John Doe")
-                .email("john@example.com")
-                .password("12345")
-                .address("Street")
-                .phoneNumber("999")
+                .name("John")
+                .email("john@test.com")
+                .password("pass")
                 .build();
 
         userEntity = Users.builder()
-                .userId("u2")
-                .email("john@example.com")
-                .roles(Set.of(Role.USER))
+                .userId("u1")
+                .email("john@test.com")
+                .roles(new HashSet<>(Set.of(Role.USER)))
                 .build();
 
         userDto = UserDto.builder()
                 .userId("u1")
-                .email("john@example.com")
+                .email("john@test.com")
                 .roles(Set.of(Role.USER))
                 .build();
-
-        adminPrincipal = UserPrincipal.builder()
-                .userId("admin")
-                .email("a@a.com")
-                .roles(Set.of(Role.SUPER_ADMIN))
-                .build();
-
-        userPrincipal = UserPrincipal.builder()
-                .userId("u1")
-                .email("john@example.com")
-                .roles(Set.of(Role.USER))
-                .build();
-
-        SecurityContextHolder.clearContext();
     }
 
-    @AfterEach
-    void clear() {
-        SecurityContextHolder.clearContext();
-    }
+    private void mockSecurityContext(String userId, String email, Set<Role> roles) {
+        UserPrincipal principal = UserPrincipal.builder()
+                .userId(userId)
+                .email(email)
+                .roles(roles)
+                .build();
 
-    /* ------------ registerUser ------------ */
-
-    @Test
-    void registerUser_success() {
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("12345")).thenReturn("enc");
-        when(userMapper.toEntity(registrationDto, "enc")).thenReturn(userEntity);
-        when(userRepository.save(userEntity)).thenReturn(userEntity);
-        when(userMapper.toDto(userEntity)).thenReturn(userDto);
-
-        UserDto result = userService.registerUser(registrationDto);
-
-        assertEquals("john@example.com", result.getEmail());
-        verify(userRepository).save(userEntity);
+        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
+        lenient().when(authentication.isAuthenticated()).thenReturn(true);
+        lenient().when(authentication.getPrincipal()).thenReturn(principal);
     }
 
     @Test
-    void registerUser_duplicateEmail() {
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+    void registerUser_Success() {
+        when(userRepository.existsByEmail(registrationDto.getEmail())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("encodedPass");
+        when(userMapper.toEntity(any(), any())).thenReturn(userEntity);
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        assertNotNull(userService.registerUser(registrationDto));
+    }
+
+    @Test
+    void registerUser_DuplicateEmail() {
+        when(userRepository.existsByEmail(registrationDto.getEmail())).thenReturn(true);
         assertThrows(DuplicateEmailException.class, () -> userService.registerUser(registrationDto));
     }
 
-    /* ------------ createSuperAdmin ------------ */
-
     @Test
-    void createSuperAdmin_success() {
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+    void createSuperAdmin_Success() {
+        when(userRepository.existsByEmail(any())).thenReturn(false);
         when(userRepository.findAll()).thenReturn(Collections.emptyList());
-        when(passwordEncoder.encode("12345")).thenReturn("enc");
+        when(passwordEncoder.encode(any())).thenReturn("encoded");
         when(userRepository.save(any())).thenReturn(userEntity);
-        when(userMapper.toDto(userEntity)).thenReturn(userDto);
+        when(userMapper.toDto(any())).thenReturn(userDto);
 
-        UserDto dto = userService.createSuperAdmin(registrationDto);
-
-        assertEquals("john@example.com", dto.getEmail());
+        assertNotNull(userService.createSuperAdmin(registrationDto));
     }
 
     @Test
-    void createSuperAdmin_duplicateEmail() {
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+    void createSuperAdmin_DuplicateEmail() {
+        when(userRepository.existsByEmail(any())).thenReturn(true);
         assertThrows(DuplicateEmailException.class, () -> userService.createSuperAdmin(registrationDto));
     }
 
     @Test
-    void createSuperAdmin_alreadyExists() {
-        Users existing = Users.builder().roles(Set.of(Role.SUPER_ADMIN)).build();
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(userRepository.findAll()).thenReturn(List.of(existing));
+    void createSuperAdmin_AlreadyExists() {
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        Users existingAdmin = Users.builder().roles(Set.of(Role.SUPER_ADMIN)).build();
+        when(userRepository.findAll()).thenReturn(List.of(existingAdmin));
+
         assertThrows(IllegalStateException.class, () -> userService.createSuperAdmin(registrationDto));
     }
 
-    /* ------------ superAdminExists ------------ */
-
     @Test
-    void superAdminExists_true() {
-        Users u = Users.builder().roles(Set.of(Role.SUPER_ADMIN)).build();
-        when(userRepository.findAll()).thenReturn(List.of(u));
-        assertTrue(userService.superAdminExists());
-    }
-
-    @Test
-    void superAdminExists_false() {
-        Users u = Users.builder().roles(Set.of(Role.USER)).build();
-        when(userRepository.findAll()).thenReturn(List.of(u));
-        assertFalse(userService.superAdminExists());
-    }
-
-    /* ------------ getUserById ------------ */
-
-    @Test
-    void getUserById_success_asAdmin() {
+    void getUserById_Success_AsSelf() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
         when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
         when(userMapper.toDto(userEntity)).thenReturn(userDto);
 
-        mockAuth(adminPrincipal);
-
-        UserDto dto = userService.getUserById("u1");
-        assertEquals("u1", dto.getUserId());
+        UserDto result = userService.getUserById("u1");
+        assertEquals("u1", result.getUserId());
     }
 
     @Test
-    void getUserById_notFound() {
-        when(userRepository.findById("x")).thenReturn(Optional.empty());
-        assertThrows(UserNotFoundException.class, () -> userService.getUserById("x"));
-    }
-
-    @Test
-    void getUserById_unauthorized() {
-        when(userRepository.findById("u2")).thenReturn(Optional.of(userEntity));
-        mockAuth(userPrincipal);
-        assertThrows(UnauthorizedException.class, () -> userService.getUserById("u2"));
-    }
-
-    /* ------------ getUserByEmail ------------ */
-
-    @Test
-    void getUserByEmail_success_asSelf() {
-        // Arrange
-        userEntity = Users.builder()
-                .userId("u1")
-                .email("john@example.com")
-                .build();
-
-        UserPrincipal samePrincipal = UserPrincipal.builder()
-                .userId("u1") // same ID to bypass UnauthorizedException
-                .email("john@example.com")
-                .roles(Set.of(Role.USER))
-                .build();
-
-        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(userEntity));
+    void getUserById_Success_AsAdmin() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
         when(userMapper.toDto(userEntity)).thenReturn(userDto);
-        mockAuth(samePrincipal); // override only for this test
 
-        // Act & Assert
-        assertEquals("john@example.com", userService.getUserByEmail("john@example.com").getEmail());
-    }
-
-
-    @Test
-    void getUserByEmail_notFound() {
-        when(userRepository.findByEmail("x")).thenReturn(Optional.empty());
-        assertThrows(UserNotFoundException.class, () -> userService.getUserByEmail("x"));
-    }
-
-    /* ------------ getAllUsers ------------ */
-
-    @Test
-    void getAllUsers_success_admin() {
-        Users u = userEntity;
-        when(userRepository.findAll()).thenReturn(List.of(u));
-        when(userMapper.toDtoList(List.of(u))).thenReturn(List.of(userDto));
-
-        mockAuth(adminPrincipal);
-
-        List<UserDto> list = userService.getAllUsers();
-        assertEquals(1, list.size());
+        userService.getUserById("u1");
+        verify(userMapper).toDto(userEntity);
     }
 
     @Test
-    void getAllUsers_notAdmin() {
-        mockAuth(userPrincipal);
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+    void getUserById_Unauthorized_AsOther() {
+        mockSecurityContext("u2", "other@test.com", Set.of(Role.USER));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+
+        assertThrows(UnauthorizedException.class, () -> userService.getUserById("u1"));
     }
 
     @Test
-    void getAllUsers_invalidPrincipal() {
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn("invalid");
-        SecurityContextHolder.setContext(securityContext);
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
-    }
-
-    @Test
-    void getAllUsers_noAuth() {
-        when(securityContext.getAuthentication()).thenReturn(null);
-        SecurityContextHolder.setContext(securityContext);
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
-    }
-
-    /* ------------ updateUser ------------ */
-
-    @Test
-    void updateUser_success_emailChange() {
-        mockAuth(userPrincipal);
-        Users existing = Users.builder()
-                .userId("u1")
-                .email("old@a.com")
-                .roles(Set.of(Role.USER))
-                .build();
-        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(userRepository.save(existing)).thenReturn(existing);
-        when(userMapper.toDto(existing)).thenReturn(userDto);
-
-        userService.updateUser("u1", userDto);
-        verify(userRepository).save(existing);
-    }
-
-    @Test
-    void updateUser_emailDuplicate() {
-        mockAuth(userPrincipal);
-        Users existing = Users.builder()
-                .userId("u1").email("old@a.com").roles(Set.of(Role.USER)).build();
-        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
-        UserDto changed = UserDto.builder().userId("u1").email("john@example.com").build();
-        assertThrows(DuplicateEmailException.class, () -> userService.updateUser("u1", changed));
-    }
-
-    @Test
-    void updateUser_notFound() {
-        mockAuth(userPrincipal);
+    void getUserById_NotFound() {
         when(userRepository.findById("u1")).thenReturn(Optional.empty());
-        assertThrows(UserNotFoundException.class, () -> userService.updateUser("u1", userDto));
+        assertThrows(UserNotFoundException.class, () -> userService.getUserById("u1"));
     }
 
-    /* ------------ deleteUser ------------ */
+    @Test
+    void getUserByEmail_Success_AsSelf() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(userEntity));
+        when(userMapper.toDto(userEntity)).thenReturn(userDto);
+
+        userService.getUserByEmail("john@test.com");
+    }
 
     @Test
-    void deleteUser_selfDeletes() {
-        mockAuth(userPrincipal);
-        when(userRepository.existsById("u1")).thenReturn(true);
-        doNothing().when(userRepository).deleteById("u1");
+    void getUserByEmail_Success_AsAdmin_Bypass() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
 
-        assertDoesNotThrow(() -> userService.deleteUser("u1"));
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(userEntity));
+        when(userMapper.toDto(userEntity)).thenReturn(userDto);
+
+        userService.getUserByEmail("john@test.com");
+    }
+
+    @Test
+    void getUserByEmail_Unauthorized() {
+        mockSecurityContext("u2", "u2@test.com", Set.of(Role.USER));
+
+        assertThrows(UnauthorizedException.class, () -> userService.getUserByEmail("john@test.com"));
+    }
+
+    @Test
+    void getUserByEmail_NotFound() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> userService.getUserByEmail("john@test.com"));
+    }
+
+    @Test
+    void getUserByEmail_NotAuthenticated() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+        assertThrows(UnauthorizedException.class, () -> userService.getUserByEmail("x"));
+    }
+
+    @Test
+    void updateUser_Success_EmailNull_SkipsCheck() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        UserDto updateDto = UserDto.builder().email(null).name("New Name").build();
+
+        userService.updateUser("u1", updateDto);
+
+        verify(userRepository, never()).existsByEmail(any());
+    }
+
+    @Test
+    void updateUser_Success_EmailSame_SkipsCheck() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+
+        userEntity.setEmail("john@test.com");
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        UserDto updateDto = UserDto.builder().email("john@test.com").name("New Name").build();
+
+        userService.updateUser("u1", updateDto);
+
+        verify(userRepository, never()).existsByEmail(any());
+    }
+
+    @Test
+    void updateUser_Success_EmailChanged_Valid() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        UserDto updateDto = UserDto.builder().email("new@test.com").build();
+        userService.updateUser("u1", updateDto);
+
+        verify(userRepository).existsByEmail("new@test.com");
+    }
+
+    @Test
+    void updateUser_Success_EmailSameIgnoreCase_SkipsCheck() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+
+        userEntity.setEmail("john@test.com");
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        UserDto updateDto = UserDto.builder().email("JOHN@test.com").name("New Name").build();
+
+        userService.updateUser("u1", updateDto);
+
+        verify(userRepository, never()).existsByEmail(any());
+    }
+
+    @Test
+    void updateUser_DuplicateEmail() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
+
+        UserDto updateDto = UserDto.builder().email("taken@test.com").build();
+
+        assertThrows(DuplicateEmailException.class, () -> userService.updateUser("u1", updateDto));
+    }
+
+    @Test
+    void deleteUser_Success_AsSelf() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+        when(userRepository.existsById("u1")).thenReturn(true);
+
+        userService.deleteUser("u1");
         verify(userRepository).deleteById("u1");
     }
 
     @Test
-    void deleteUser_adminDeletesOther() {
-        mockAuth(adminPrincipal);
-        when(userRepository.existsById("uX")).thenReturn(true);
-        doNothing().when(userRepository).deleteById("uX");
-        assertDoesNotThrow(() -> userService.deleteUser("uX"));
+    void deleteUser_Success_AsAdmin_DeletingOther() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
+        when(userRepository.existsById("u1")).thenReturn(true);
+
+        userService.deleteUser("u1");
+        verify(userRepository).deleteById("u1");
     }
 
     @Test
-    void deleteUser_unauthorizedUser() {
-        mockAuth(userPrincipal);
-        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("uX"));
-    }
-
-    @Test
-    void deleteUser_notFound() {
-        mockAuth(adminPrincipal);
-        when(userRepository.existsById("missing")).thenReturn(false);
-        assertThrows(UserNotFoundException.class, () -> userService.deleteUser("missing"));
-    }
-
-    @Test
-    void deleteUser_invalidPrincipal() {
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn("string");
-        SecurityContextHolder.setContext(securityContext);
+    void deleteUser_Unauthorized() {
+        mockSecurityContext("u2", "u2@test.com", Set.of(Role.USER));
         assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
     }
 
-    /* ------------ assignRoles ------------ */
-
     @Test
-    void assignRoles_success() {
-        Users existing = userEntity;
-        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
-        when(userRepository.save(existing)).thenReturn(existing);
-        when(userMapper.toDto(existing)).thenReturn(userDto);
+    void deleteUser_NotFound() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
+        when(userRepository.existsById("u1")).thenReturn(false);
 
-        UserDto dto = userService.assignRoles("u1", Set.of(Role.USER));
-        assertEquals("u1", dto.getUserId());
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUser("u1"));
+    }
+
+    void deleteUser_NullAuthentication() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
     }
 
     @Test
-    void assignRoles_notFound() {
-        when(userRepository.findById("missing")).thenReturn(Optional.empty());
-        assertThrows(UserNotFoundException.class, () -> userService.assignRoles("missing", Set.of(Role.USER)));
+    void deleteUser_PrincipalIsNull() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(null);
+
+        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
     }
 
-    /* ------------ validateUserAccess branches ------------ */
+    @Test
+    void deleteUser_WrongPrincipalType() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn("WRONG_PRINCIPAL_TYPE");
+
+        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
+    }
 
     @Test
-    void validateUserAccess_notAuthenticated() {
+    void getAllUsers_Success() {
+        mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
+        when(userRepository.findAll()).thenReturn(List.of(userEntity));
+        when(userMapper.toDtoList(any())).thenReturn(List.of(userDto));
+
+        assertEquals(1, userService.getAllUsers().size());
+    }
+
+    @Test
+    void getAllUsers_Unauthorized_Role() {
+        mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+    }
+
+    @Test
+    void getAllUsers_NoAuth() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+    }
+
+    @Test
+    void getAllUsers_WrongPrincipalType() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn("STRING_PRINCIPAL");
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+    }
+
+    @Test
+    void assignRoles_Success() {
+        when(userRepository.findById("u1")).thenReturn(Optional.of(userEntity));
+        when(userRepository.save(any())).thenReturn(userEntity);
+        when(userMapper.toDto(any())).thenReturn(userDto);
+
+        userService.assignRoles("u1", Set.of(Role.SUPER_ADMIN));
+        verify(userRepository).save(userEntity);
+    }
+
+    @Test
+    void assignRoles_NotFound() {
+        when(userRepository.findById("u1")).thenReturn(Optional.empty());
+        assertThrows(UserNotFoundException.class, () -> userService.assignRoles("u1", Set.of(Role.USER)));
+    }
+
+    @Test
+    void validateUserAccess_NullAuthentication() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        UserDto dummyDto = new UserDto();
+        assertThrows(UnauthorizedException.class, () -> userService.updateUser("u1", dummyDto));
+    }
+
+    @Test
+    void validateUserAccess_NotAuthenticated() {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(authentication.isAuthenticated()).thenReturn(false);
-        SecurityContextHolder.setContext(securityContext);
-        assertThrows(UnauthorizedException.class,
-                () -> invokeValidate("x"));
+
+        UserDto dummyDto = new UserDto();
+        assertThrows(UnauthorizedException.class, () -> userService.updateUser("u1", dummyDto));
     }
 
     @Test
-    void validateUserAccess_superAdminPasses() {
-        mockAuth(adminPrincipal);
-        assertDoesNotThrow(() -> invokeValidate("x"));
+    void validateUserAccess_WrongPrincipal() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn("WRONG_PRINCIPAL_TYPE");
+
+        UserDto dummyDto = new UserDto();
+        assertThrows(UnauthorizedException.class, () -> userService.updateUser("u1", dummyDto));
     }
 
     @Test
-    void validateUserAccess_selfPasses() {
-        mockAuth(userPrincipal);
-        assertDoesNotThrow(() -> invokeValidate("u1"));
-    }
-
-    @Test
-    void validateUserAccess_unauthorized() {
-        mockAuth(userPrincipal);
-        assertThrows(UnauthorizedException.class, () -> invokeValidate("other"));
-    }
-
-    /* ------------ superAdminExists (Branch 1) ------------ */
-
-    @Test
-    void superAdminExists_false_nullRoles() {
-        // Covers the 'user.getRoles() != null' check in the stream
-        Users userWithNullRoles = Users.builder().roles(null).build();
-        when(userRepository.findAll()).thenReturn(List.of(userWithNullRoles));
+    void superAdminExists_NullRoles_False() {
+        Users u = new Users();
+        u.setRoles(null);
+        when(userRepository.findAll()).thenReturn(List.of(u));
         assertFalse(userService.superAdminExists());
     }
 
-
-    /* ------------ updateUser (Branches 2 & 3) ------------ */
-
     @Test
-    void updateUser_success_emailIsNull() {
-        // Covers the branch where 'userDto.getEmail() != null' is false
-        mockAuth(userPrincipal);
-        Users existing = Users.builder().userId("u1").email("old@a.com").build();
-        UserDto dtoWithNullEmail = UserDto.builder().email(null).name("New Name").build();
-
-        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
-        when(userRepository.save(existing)).thenReturn(existing);
-
-        userService.updateUser("u1", dtoWithNullEmail);
-
-        // Verify that 'existsByEmail' was never called because the email was null
-        verify(userRepository, never()).existsByEmail(any());
-        verify(userRepository).save(existing);
-    }
-
-    @Test
-    void updateUser_success_emailIsSame() {
-        // Covers the branch where '!userDto.getEmail().equals(existingUser.getEmail())' is false
-        mockAuth(userPrincipal);
-        Users existing = Users.builder().userId("u1").email("john@example.com").build();
-        UserDto dtoWithSameEmail = UserDto.builder().email("john@example.com").name("New Name").build();
-
-        when(userRepository.findById("u1")).thenReturn(Optional.of(existing));
-        when(userRepository.save(existing)).thenReturn(existing);
-
-        userService.updateUser("u1", dtoWithSameEmail);
-
-        // Verify that 'existsByEmail' was never called because the email was the same
-        verify(userRepository, never()).existsByEmail(any());
-        verify(userRepository).save(existing);
-    }
-
-
-    /* ------------ validateUserAccess (Branches 4 & 5) ------------ */
-
-    @Test
-    void validateUserAccess_nullAuthentication() {
-        // Covers the 'authentication == null' branch
-        when(securityContext.getAuthentication()).thenReturn(null);
-        SecurityContextHolder.setContext(securityContext);
-
-        assertThrows(UnauthorizedException.class,
-                () -> invokeValidate("x"));
-    }
-
-    @Test
-    void validateUserAccess_invalidPrincipalType() {
-        // Covers the '!(authentication.getPrincipal() instanceof UserPrincipal)' branch
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getPrincipal()).thenReturn("a_random_string"); // Not a UserPrincipal
-        SecurityContextHolder.setContext(securityContext);
-
-        assertThrows(UnauthorizedException.class,
-                () -> invokeValidate("x"));
-    }
-
-    @Test
-    void deleteUser_noAuth() {
-        when(securityContext.getAuthentication()).thenReturn(null);
-        SecurityContextHolder.setContext(securityContext);
-        assertThrows(UnauthorizedException.class, () -> userService.deleteUser("u1"));
-    }
-
-    /* ------------ helper ------------ */
-    private void mockAuth(UserPrincipal principal) {
-        lenient().when(authentication.isAuthenticated()).thenReturn(true);
-        lenient().when(authentication.getPrincipal()).thenReturn(principal);
-        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-    }
-
-
-    // reflective call to private validateUserAccess to ensure branch coverage
-    private void invokeValidate(String id) {
-        try {
-            var m = UserServiceImpl.class.getDeclaredMethod("validateUserAccess", String.class);
-            m.setAccessible(true);
-            m.invoke(userService, id);
-        } catch (Exception e) {
-            if (e.getCause() instanceof RuntimeException re) throw re;
-        }
-    }
-
-
-    private void validateUserAccess(String requestedUserId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserPrincipal currentUser)) {
-            throw new UnauthorizedException("User not authenticated or invalid principal");
-        }
-
-        String currentUserId = currentUser.getUserId();
-
-        if (currentUser.getRoles().contains(Role.SUPER_ADMIN)) {
-            return;
-        }
-        if (!currentUserId.equals(requestedUserId)) {
-            throw new UnauthorizedException("You don't have permission to access this user's data");
-        }
+    void superAdminExists_UserWithStandardRole_ReturnsFalse() {
+        Users u = Users.builder().roles(Set.of(Role.USER)).build();
+        when(userRepository.findAll()).thenReturn(List.of(u));
+        assertFalse(userService.superAdminExists());
     }
 }

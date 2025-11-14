@@ -80,7 +80,7 @@ class AuthControllerUnitTest {
         when(adminSecret.getCode()).thenReturn("SECRET123");
 
         ResponseEntity<?> response = authController.registerAdmin(
-                registrationDto, "WRONG_SECRET", request);
+                registrationDto, "WRONG_SECRET");
 
         assertThat(response.getStatusCode().value()).isEqualTo(403);
         assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
@@ -93,7 +93,7 @@ class AuthControllerUnitTest {
         when(userService.superAdminExists()).thenReturn(true);
 
         ResponseEntity<?> response = authController.registerAdmin(
-                registrationDto, "SECRET123", request);
+                registrationDto, "SECRET123");
 
         assertThat(response.getStatusCode().value()).isEqualTo(410);
         assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
@@ -106,7 +106,7 @@ class AuthControllerUnitTest {
         when(userService.createSuperAdmin(registrationDto)).thenReturn(userDto);
 
         ResponseEntity<?> response = authController.registerAdmin(
-                registrationDto, "SECRET123", request);
+                registrationDto, "SECRET123");
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);
         assertThat(response.getBody()).isInstanceOf(SuccessMessage.class);
@@ -121,7 +121,7 @@ class AuthControllerUnitTest {
                 .thenThrow(new DuplicateEmailException("Email already registered"));
 
         ResponseEntity<?> response = authController.registerAdmin(
-                registrationDto, "SECRET123", request);
+                registrationDto, "SECRET123");
 
         assertThat(response.getStatusCode().value()).isEqualTo(409);
         assertThat(response.getBody()).isInstanceOf(ErrorMessage.class);
