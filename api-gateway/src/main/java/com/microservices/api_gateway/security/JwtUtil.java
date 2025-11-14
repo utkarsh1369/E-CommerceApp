@@ -59,21 +59,21 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            log.info("✅ Token parsed successfully. Subject: {}, UserId: {}",
+            log.info(" Token parsed successfully. Subject: {}, UserId: {}",
                     claims.getSubject(), claims.get("userId"));
             return claims;
 
         } catch (SignatureException e) {
-            log.error("❌ Invalid JWT signature: {}", e.getMessage());
+            log.error(" Invalid JWT signature: {}", e.getMessage());
             throw e;
         } catch (MalformedJwtException e) {
-            log.error("❌ Malformed JWT token: {}", e.getMessage());
+            log.error(" Malformed JWT token: {}", e.getMessage());
             throw e;
         } catch (ExpiredJwtException e) {
-            log.error("❌ Expired JWT token: {}", e.getMessage());
+            log.error(" Expired JWT token: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("❌ JWT parsing error: {}", e.getMessage(), e);
+            log.error("JWT parsing error: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -86,26 +86,22 @@ public class JwtUtil {
 
         boolean expired = expiration.before(now);
         if (expired) {
-            log.warn("❌ Token is EXPIRED");
+            log.warn(" Token is EXPIRED");
         }
 
         return expired;
     }
 
+
     public Boolean isTokenValid(String token) {
         try {
-            extractAllClaims(token); // This validates signature
+            extractAllClaims(token);
 
-            if (isTokenExpired(token)) {
-                log.error("❌ Token validation failed: Token is expired");
-                return false;
-            }
-
-            log.info("✅ Token is VALID");
+            log.info(" Token is VALID");
             return true;
 
         } catch (Exception e) {
-            log.error("❌ Token validation failed: {}", e.getMessage());
+            log.error("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
