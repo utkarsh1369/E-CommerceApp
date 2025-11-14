@@ -86,4 +86,25 @@ public class JwtUtil {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
+    public java.util.Collection<? extends GrantedAuthority> getAuthorities(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+
+            Object rolesObject = claims.get("roles");
+
+            if (rolesObject instanceof java.util.List<?> roles) {
+                return roles.stream()
+                        .filter(role -> role instanceof String)
+                        .map(role -> new org.springframework.security.core.authority.SimpleGrantedAuthority((String) role))
+                        .collect(Collectors.toList());
+            }
+
+            return java.util.Collections.emptyList();
+
+        } catch (Exception e) {
+            System.err.println("Error extracting authorities from token: " + e.getMessage());
+            return java.util.Collections.emptyList();
+        }
+    }
 }

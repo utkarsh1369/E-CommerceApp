@@ -21,7 +21,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/api/v1/products")
 @Tag(name = "Product APIs",description = "CRUD operation on Products")
 @SecurityRequirement(name = "bearerAuth")
 public class ProductController {

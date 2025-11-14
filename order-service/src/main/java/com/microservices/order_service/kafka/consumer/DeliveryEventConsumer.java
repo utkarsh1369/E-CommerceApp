@@ -1,6 +1,7 @@
 package com.microservices.order_service.kafka.consumer;
 
 import com.microservices.order_service.kafka.event.DeliveryCreatedEvent;
+import com.microservices.order_service.kafka.event.DeliveryStatusChangedEvent;
 import com.microservices.order_service.model.Orders;
 import com.microservices.order_service.model.Status;
 import com.microservices.order_service.repository.OrderRepository;
@@ -30,38 +31,53 @@ public class DeliveryEventConsumer {
                 topic, partition, offset, event);
 
         try {
-            // Find the order
             Orders order = orderRepository.findById(event.getOrderId())
                     .orElseThrow(() -> new RuntimeException("Order not found with ID: " + event.getOrderId()));
 
-            // Update order with delivery ID
             order.setDeliveryId(event.getDeliveryId());
             orderRepository.save(order);
 
             log.info("Successfully updated order {} with delivery ID {}",
                     event.getOrderId(), event.getDeliveryId());
 
-            // Acknowledge the message
             acknowledgment.acknowledge();
 
         } catch (Exception e) {
             log.error("Error processing delivery created event: {}", e.getMessage(), e);
-            // Don't acknowledge - message will be reprocessed
             throw e;
         }
     }
 
-//    @KafkaListener(topics = "delivery-status-changed", groupId = "order-service-group")
-//    public void consumeDeliveryStatusChanged(DeliveryStatusChangedEvent event) {
-//        log.info("Delivery status changed: deliveryId={}, status: {} → {}",
-//                event.getDeliveryId(), event.getOldStatus(), event.getNewStatus());
-//
-//        // Update order status based on delivery status
-//        if ("DELIVERED".equals(event.getNewStatus())) {
-//            Orders order = orderRepository.findById(event.getOrderId()).orElseThrow();
-//            order.setStatus(Status.DELIVERED);
-//            orderRepository.save(order);
-//            log.info("Order {} marked as DELIVERED", event.getOrderId());
-//        }
-//    }
+    @KafkaListener(
+            topics = "delivery-status-changed",
+            groupId = "${spring.kafka.consumer.group-id:order-service-group}",
+            containerFactory = "deliveryStatusKafkaListenerContainerFactory"
+    )
+    @Transactional
+    public void consumeDeliveryStatusChanged(@Payload DeliveryStatusChangedEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
+            @Header(KafkaHeaders.OFFSET) long offset,
+            Acknowledgment acknowledgment) {
+
+        log.info("Received delivery status change from topic '{}' [partition: {}, offset: {}]: deliveryId={}, status: {} → {}",
+                topic, partition, offset, event.getDeliveryId(), event.getOldStatus(), event.getNewStatus());
+
+        try {
+            if ("DELIVERED".equals(event.getNewStatus())) {
+                Orders order = orderRepository.findById(event.getOrderId())
+                        .orElseThrow(() -> new RuntimeException("Order not found for status update: " + event.getOrderId()));
+
+                order.setStatus(Status.DELIVERED);
+                orderRepository.save(order);
+                log.info("Order {} marked as DELIVERED", event.getOrderId());
+            }
+
+            acknowledgment.acknowledge();
+
+        } catch (Exception e) {
+            log.error("Error processing delivery status change: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
 }

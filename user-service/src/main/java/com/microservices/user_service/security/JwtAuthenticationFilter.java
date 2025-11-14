@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -34,14 +36,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // ===== PRIORITY 1: Check for Gateway Headers (Fast Path) =====
         String gatewayUserId = request.getHeader("X-User-Id");
         String gatewayUserEmail = request.getHeader("X-User-Email");
+        String rolesHeader = request.getHeader("X-User-Roles");
 
         if (gatewayUserId != null && gatewayUserEmail != null) {
             log.debug("🚪 Request from API Gateway - User ID: {}, Email: {}", gatewayUserId, gatewayUserEmail);
 
+            Set<Role> roles = Arrays.stream(rolesHeader.split(","))
+                    .map(roleName -> roleName.startsWith("ROLE_") ? roleName.substring(5) : roleName) // Strip "ROLE_"
+                    .map(Role::valueOf)
+                    .collect(Collectors.toSet());
+
             UserPrincipal userPrincipal = UserPrincipal.builder()
                     .userId(gatewayUserId)
                     .email(gatewayUserEmail)
-                    .roles(Set.of(Role.USER))
+                    .roles(roles)
                     .build();
 
             UsernamePasswordAuthenticationToken authentication =

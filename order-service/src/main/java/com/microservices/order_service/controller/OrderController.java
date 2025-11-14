@@ -30,7 +30,7 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    @PreAuthorize("hasAuthority('USER')")
+    @PreAuthorize("hasRole('USER')")
     @PostMapping
     @Operation(summary = "Create an Order",description = "Only USER can place an Order")
     @ApiResponses(value = {
@@ -71,7 +71,7 @@ public class OrderController {
         return ResponseEntity.ok(updatedOrder);
     }
 
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ORDER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN')")
     @GetMapping
     @Operation(summary = "Get All Orders",description = "Only SUPER_ADMIN and ORDER_ADMIN can see all orders")
     @ApiResponses(value = {
@@ -90,7 +90,7 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ORDER_ADMIN') or @orderSecurityService.isOrderOwner(#orderId)")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN') or @orderSecurityService.isOrderOwner(#orderId)")
     @GetMapping("/{orderId}")
     @Operation(summary = "Get Order by its orderId",description = "SUPER_ADMIN,ORDER_ADMIN and user itself can access this")
     @ApiResponses(value = {
@@ -110,7 +110,7 @@ public class OrderController {
         return ResponseEntity.ok(order);
     }
 
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ORDER_ADMIN','DELIVERY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ORDER_ADMIN','DELIVERY_ADMIN')")
     @GetMapping("/{orderId}/delivery")
     @Operation(summary = "Get delivery details of a order",description = "ONLY SUPER_ADMIN,ORDER_ADMIN and DELIVERY_ADMIN can see this")
     @ApiResponses(value = {

@@ -55,3 +55,7 @@ management:
     export:
       prometheus:
         enabled: true
+
+jwt:
+  secret: my-secret-key-for-jwt-is-1234567!@#
+  expiration: 600000

@@ -43,11 +43,16 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                 String userId = jwtUtil.extractUserId(token);
                 String email = jwtUtil.extractUsername(token);
 
+                java.util.List<String> roles = jwtUtil.extractRoles(token);
+                String rolesHeader = String.join(",", roles);
+
                 ServerWebExchange modifiedExchange = exchange.mutate()
-                        .request(r -> r.header("X-User-Id", userId)
-                                .header("X-User-Email", email))
+                        .request(r -> r
+                                .header("X-User-Id", userId)
+                                .header("X-User-Email", email)
+                                .header("X-User-Roles", rolesHeader))
                         .build();
-                log.debug("User {} authenticated for path: {}", email, path);
+                log.debug("User {} authenticated for path: {} with roles: {}", email, path, rolesHeader);
                 return chain.filter(modifiedExchange);
             } catch (Exception e) {
                 log.error("JWT validation failed for path {}: {}", path, e.getMessage());

@@ -24,7 +24,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/delivery")
+@RequestMapping("/api/v1/delivery")
 @Tag(name = "Delivery APIs",description = "CRUD Operations on Deliveries")
 @SecurityRequirement(name = "bearerAuth")
 public class DeliveryController {

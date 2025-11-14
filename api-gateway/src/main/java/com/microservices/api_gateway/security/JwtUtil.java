@@ -22,6 +22,7 @@ import java.util.function.Function;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "jwt")
+@SuppressWarnings("unchecked")
 public class JwtUtil {
 
     private String secret;
@@ -104,5 +105,9 @@ public class JwtUtil {
             log.error("Token validation failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    public java.util.List<String> extractRoles(String token) {
+        return extractClaim(token, claims -> claims.get("roles", java.util.List.class));
     }
 }
