@@ -149,6 +149,9 @@ class OrderControllerIntegrationTest {
     @DisplayName("PUT /orders/{orderId} - Success as USER")
     @WithMockUser(roles = "USER")
     void updateOrder_asUser_returnsOk() throws Exception {
+
+        when(orderSecurityService.isOrderOwner(eq(1L))).thenReturn(true);
+
         when(orderService.updateOrder(eq(1L), any(OrderRequestDto.class))).thenReturn(orderResponseDto);
 
         mockMvc.perform(put("/api/v1/orders/1")
@@ -162,6 +165,9 @@ class OrderControllerIntegrationTest {
     @DisplayName("PUT /orders/{orderId} - Not Found")
     @WithMockUser(roles = "USER")
     void updateOrder_notFound_returnsNotFound() throws Exception {
+
+        when(orderSecurityService.isOrderOwner(eq(99L))).thenReturn(true);
+
         when(orderService.updateOrder(eq(99L), any(OrderRequestDto.class)))
                 .thenThrow(new OrderNotFoundException("Order not found"));
 
