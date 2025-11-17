@@ -160,5 +160,4 @@ public class UserController {
         UserDto user = userService.assignRoles(userId, roles);
         return ResponseEntity.ok(user);
     }
-    //TODO:15 factor microservices->cicd left
 }

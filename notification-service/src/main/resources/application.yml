@@ -21,4 +21,21 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.microservices.notification_service.model.NotificationEvent
 
-
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0

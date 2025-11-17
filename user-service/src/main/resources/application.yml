@@ -21,6 +21,7 @@ jwt:
   secret: my-secret-key-for-jwt-is-1234567!@#
   expiration: 600000
 
+
 admin:
   secret:
     code: ADMIN-secret-code-is-admin12345!@#
@@ -45,3 +46,9 @@ management:
     export:
       prometheus:
         enabled: true
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
