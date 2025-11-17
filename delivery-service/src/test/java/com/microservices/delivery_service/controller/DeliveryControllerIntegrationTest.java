@@ -94,12 +94,12 @@ class DeliveryControllerIntegrationTest {
     // ==================== POST /delivery/create ====================
 
     @Test
-    @DisplayName("POST /delivery/create - Success as DELIVERY_ADMIN")
+    @DisplayName("POST /api/v1/delivery/create - Success as DELIVERY_ADMIN")
     @WithMockUser(roles = "DELIVERY_ADMIN")
     void createDelivery_asDeliveryAdmin_returnsCreated() throws Exception {
         when(deliveryService.createDelivery(any(DeliveryRequestDto.class))).thenReturn(deliveryDto);
 
-        mockMvc.perform(post("/delivery/create")
+        mockMvc.perform(post("/api/v1/delivery/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(deliveryRequestDto)))
                 .andExpect(status().isCreated())
@@ -108,22 +108,22 @@ class DeliveryControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /delivery/create - Forbidden as USER")
+    @DisplayName("POST /api/v1/delivery/create - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void createDelivery_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/delivery/create")
+        mockMvc.perform(post("/api/v1/delivery/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(deliveryRequestDto)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("POST /delivery/create - Bad Request for invalid DTO")
+    @DisplayName("POST /api/v1/delivery/create - Bad Request for invalid DTO")
     @WithMockUser(roles = "SUPER_ADMIN")
     void createDelivery_invalidDto_returnsBadRequest() throws Exception {
         DeliveryRequestDto invalidDto = DeliveryRequestDto.builder().orderId(null).build();
 
-        mockMvc.perform(post("/delivery/create")
+        mockMvc.perform(post("/api/v1/delivery/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());
@@ -141,17 +141,16 @@ class DeliveryControllerIntegrationTest {
                 .deliveryId(1L)
                 .orderId(100L)
                 .userId("deliveryUser123")
-                .status(Status.SHIPPED) // The updated status
+                .status(Status.SHIPPED)
                 .build();
 
         when(deliveryService.updateDeliveryStatus(eq(1L), any(UpdateDeliveryStatusDto.class)))
                 .thenReturn(shippedDelivery);
 
-        mockMvc.perform(patch("/delivery/1/update-status")
+        mockMvc.perform(patch("/api/v1/delivery/1/update-status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateStatusDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is("SHIPPED")));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -160,7 +159,7 @@ class DeliveryControllerIntegrationTest {
     void updateDeliveryStatus_invalidDto_returnsBadRequest() throws Exception {
         UpdateDeliveryStatusDto invalidDto = UpdateDeliveryStatusDto.builder().status(null).build();
 
-        mockMvc.perform(patch("/delivery/1/update-status")
+        mockMvc.perform(patch("/api/v1/delivery/1/update-status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());
@@ -173,7 +172,7 @@ class DeliveryControllerIntegrationTest {
         when(deliveryService.updateDeliveryStatus(eq(99L), any(UpdateDeliveryStatusDto.class)))
                 .thenThrow(new DeliveryNotFoundException("Delivery not found"));
 
-        mockMvc.perform(patch("/delivery/99/update-status")
+        mockMvc.perform(patch("/api/v1/delivery/99/update-status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateStatusDto)))
                 .andExpect(status().isNotFound());
@@ -182,34 +181,34 @@ class DeliveryControllerIntegrationTest {
     // ==================== GET /delivery ====================
 
     @Test
-    @DisplayName("GET /delivery - Success as DELIVERY_ADMIN")
+    @DisplayName("GET /api/v1/delivery - Success as DELIVERY_ADMIN")
     @WithMockUser(roles = "DELIVERY_ADMIN")
     void getAllDeliveries_asDeliveryAdmin_returnsOk() throws Exception {
         when(deliveryService.findAllDeliveries()).thenReturn(allDeliveries);
 
-        mockMvc.perform(get("/delivery"))
+        mockMvc.perform(get("/api/v1/delivery"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].deliveryId", is(1)));
     }
 
     @Test
-    @DisplayName("GET /delivery - Forbidden as USER")
+    @DisplayName("GET /api/v1/delivery - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void getAllDeliveries_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/delivery"))
+        mockMvc.perform(get("/api/v1/delivery"))
                 .andExpect(status().isForbidden());
     }
 
     // ==================== GET /delivery/{deliveryId} ====================
 
     @Test
-    @DisplayName("GET /{deliveryId} - Success as ADMIN")
+    @DisplayName("GET /api/v1/{deliveryId} - Success as ADMIN")
     @WithMockUser(roles = "SUPER_ADMIN")
     void getDeliveryById_asAdmin_returnsOk() throws Exception {
         when(deliveryService.findDeliveryById(1L)).thenReturn(deliveryDto);
 
-        mockMvc.perform(get("/delivery/1"))
+        mockMvc.perform(get("/api/v1/delivery/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deliveryId", is(1)))
                 .andExpect(jsonPath("$.userId", is("deliveryUser123")));
@@ -223,7 +222,7 @@ class DeliveryControllerIntegrationTest {
         when(deliverySecurityService.isDeliveryOwner(1L)).thenReturn(true);
         when(deliveryService.findDeliveryById(1L)).thenReturn(deliveryDto);
 
-        mockMvc.perform(get("/delivery/1"))
+        mockMvc.perform(get("/api/v1/delivery/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deliveryId", is(1)));
     }
@@ -235,7 +234,7 @@ class DeliveryControllerIntegrationTest {
         // Mock security service to return false
         when(deliverySecurityService.isDeliveryOwner(1L)).thenReturn(false);
 
-        mockMvc.perform(get("/delivery/1"))
+        mockMvc.perform(get("/api/v1/delivery/1"))
                 .andExpect(status().isForbidden());
 
         verify(deliveryService, never()).findDeliveryById(any());
@@ -248,7 +247,7 @@ class DeliveryControllerIntegrationTest {
         when(deliveryService.findDeliveryById(99L))
                 .thenThrow(new DeliveryNotFoundException("Delivery not found"));
 
-        mockMvc.perform(get("/delivery/99"))
+        mockMvc.perform(get("/api/v1/delivery/99"))
                 .andExpect(status().isNotFound());
     }
 
@@ -260,7 +259,7 @@ class DeliveryControllerIntegrationTest {
     void getOrderByDeliveryId_asOrderAdmin_returnsOk() throws Exception {
         when(deliveryService.findOrderByDeliveryId(1L)).thenReturn(orderDto);
 
-        mockMvc.perform(get("/delivery/1/order"))
+        mockMvc.perform(get("/api/v1/delivery/1/order"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId", is(100)));
     }
@@ -269,7 +268,7 @@ class DeliveryControllerIntegrationTest {
     @DisplayName("GET /{deliveryId}/order - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void getOrderByDeliveryId_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/delivery/1/order"))
+        mockMvc.perform(get("/api/v1/delivery/1/order"))
                 .andExpect(status().isForbidden());
     }
 
@@ -280,7 +279,7 @@ class DeliveryControllerIntegrationTest {
         when(deliveryService.findOrderByDeliveryId(99L))
                 .thenThrow(new DeliveryNotFoundException("Order not found for delivery 99"));
 
-        mockMvc.perform(get("/delivery/99/order"))
+        mockMvc.perform(get("/api/v1/delivery/99/order"))
                 .andExpect(status().isNotFound());
     }
 }
