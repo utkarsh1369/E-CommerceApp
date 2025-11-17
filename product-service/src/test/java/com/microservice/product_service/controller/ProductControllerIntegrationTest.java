@@ -64,12 +64,12 @@ public class ProductControllerIntegrationTest {
     // ==================== POST /products/add ====================
 
     @Test
-    @DisplayName("POST /products/add - Success as SUPER_ADMIN")
+    @DisplayName("POST /api/v1/products/add - Success as SUPER_ADMIN")
     @WithMockUser(roles = "SUPER_ADMIN")
     void createProduct_asSuperAdmin_returnsCreated() throws Exception {
         when(productService.createProduct(any(ProductDTO.class))).thenReturn(productDTO);
 
-        mockMvc.perform(post("/products/add")
+        mockMvc.perform(post("/api/v1/products/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isCreated())
@@ -77,29 +77,29 @@ public class ProductControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /products/add - Success as PRODUCT_ADMIN")
+    @DisplayName("POST /api/v1/products/add - Success as PRODUCT_ADMIN")
     @WithMockUser(roles = "PRODUCT_ADMIN")
     void createProduct_asProductAdmin_returnsCreated() throws Exception {
         when(productService.createProduct(any(ProductDTO.class))).thenReturn(productDTO);
 
-        mockMvc.perform(post("/products/add")
+        mockMvc.perform(post("/api/v1/products/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isCreated());
     }
 
     @Test
-    @DisplayName("POST /products/add - Forbidden as USER")
+    @DisplayName("POST /api/v1/products/add - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void createProduct_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/products/add")
+        mockMvc.perform(post("/api/v1/products/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("POST /products/add - Bad Request for invalid DTO")
+    @DisplayName("POST /api/v1/products/add - Bad Request for invalid DTO")
     @WithMockUser(roles = "SUPER_ADMIN")
     void createProduct_invalidDTO_returnsBadRequest() throws Exception {
         // Assuming name is @NotBlank and price is @Positive
@@ -108,7 +108,7 @@ public class ProductControllerIntegrationTest {
                 .productPrice(new BigDecimal("-10.00")) // Invalid
                 .build();
 
-        mockMvc.perform(post("/products/add")
+        mockMvc.perform(post("/api/v1/products/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidProduct)))
                 .andExpect(status().isBadRequest());
@@ -117,9 +117,9 @@ public class ProductControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /products/add - Unauthorized")
+    @DisplayName("POST /api/v1/products/add - Unauthorized")
     void createProduct_unauthorized_returnsUnauthorized() throws Exception {
-        mockMvc.perform(post("/products/add")
+        mockMvc.perform(post("/api/v1/products/add")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isUnauthorized());
@@ -128,12 +128,12 @@ public class ProductControllerIntegrationTest {
     // ==================== PUT /products/update/{productId} ====================
 
     @Test
-    @DisplayName("PUT /products/update/{productId} - Success as SUPER_ADMIN")
+    @DisplayName("PUT /api/v1/products/update/{productId} - Success as SUPER_ADMIN")
     @WithMockUser(roles = "SUPER_ADMIN")
     void updateProduct_asSuperAdmin_returnsOk() throws Exception {
         when(productService.updateProduct(eq(1L), any(ProductDTO.class))).thenReturn(productDTO);
 
-        mockMvc.perform(put("/products/update/1")
+        mockMvc.perform(put("/api/v1/products/update/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isOk())
@@ -142,23 +142,23 @@ public class ProductControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /products/update/{productId} - Forbidden as USER")
+    @DisplayName("PUT /api/v1/products/update/{productId} - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void updateProduct_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(put("/products/update/1")
+        mockMvc.perform(put("/api/v1/products/update/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("PUT /products/update/{productId} - Not Found")
+    @DisplayName("PUT /api/v1/products/update/{productId} - Not Found")
     @WithMockUser(roles = "PRODUCT_ADMIN")
     void updateProduct_notFound_returnsNotFound() throws Exception {
         when(productService.updateProduct(eq(99L), any(ProductDTO.class)))
                 .thenThrow(new ProductNotFoundException("Product not found"));
 
-        mockMvc.perform(put("/products/update/99")
+        mockMvc.perform(put("/api/v1/products/update/99")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isNotFound());
@@ -167,98 +167,98 @@ public class ProductControllerIntegrationTest {
     // ==================== GET /products ====================
 
     @Test
-    @DisplayName("GET /products - Success as USER")
+    @DisplayName("GET /api/v1/products - Success as USER")
     @WithMockUser(roles = "USER")
     void getAllProducts_asUser_returnsOk() throws Exception {
         when(productService.getAllProducts()).thenReturn(productList);
 
-        mockMvc.perform(get("/products"))
+        mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].productName", is("Laptop")));
     }
 
     @Test
-    @DisplayName("GET /products - Success as ORDER_ADMIN")
+    @DisplayName("GET /api/v1/products - Success as ORDER_ADMIN")
     @WithMockUser(roles = "ORDER_ADMIN")
     void getAllProducts_asOrderAdmin_returnsOk() throws Exception {
         when(productService.getAllProducts()).thenReturn(productList);
 
-        mockMvc.perform(get("/products"))
+        mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
     }
 
     @Test
-    @DisplayName("GET /products - Unauthorized")
+    @DisplayName("GET /api/v1/products - Unauthorized")
     void getAllProducts_unauthorized_returnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/products"))
+        mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isUnauthorized());
     }
 
     // ==================== GET /products/{productId} ====================
 
     @Test
-    @DisplayName("GET /products/{productId} - Success as USER")
+    @DisplayName("GET /api/v1/products/{productId} - Success as USER")
     @WithMockUser(roles = "USER")
     void getProductById_asUser_returnsOk() throws Exception {
         when(productService.getProductById(1L)).thenReturn(productDTO);
 
-        mockMvc.perform(get("/products/1"))
+        mockMvc.perform(get("/api/v1/products/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productName", is("Laptop")));
     }
 
     @Test
-    @DisplayName("GET /products/{productId} - Not Found")
+    @DisplayName("GET /api/v1/products/{productId} - Not Found")
     @WithMockUser(roles = "USER")
     void getProductById_notFound_returnsNotFound() throws Exception {
         when(productService.getProductById(99L))
                 .thenThrow(new ProductNotFoundException("Product not found"));
 
-        mockMvc.perform(get("/products/99"))
+        mockMvc.perform(get("/api/v1/products/99"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("GET /products/{productId} - Unauthorized")
+    @DisplayName("GET /api/v1/products/{productId} - Unauthorized")
     void getProductById_unauthorized_returnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/products/1"))
+        mockMvc.perform(get("/api/v1/products/1"))
                 .andExpect(status().isUnauthorized());
     }
 
     // ==================== DELETE /products/delete/{productId} ====================
 
     @Test
-    @DisplayName("DELETE /products/delete/{productId} - Success as SUPER_ADMIN")
+    @DisplayName("DELETE /api/v1/products/delete/{productId} - Success as SUPER_ADMIN")
     @WithMockUser(roles = "SUPER_ADMIN")
     void deleteProduct_asSuperAdmin_returnsNoContent() throws Exception {
         doNothing().when(productService).deleteProductById(1L);
 
-        mockMvc.perform(delete("/products/delete/1"))
+        mockMvc.perform(delete("/api/v1/products/delete/1"))
                 .andExpect(status().isNoContent());
 
         verify(productService, times(1)).deleteProductById(1L);
     }
 
     @Test
-    @DisplayName("DELETE /products/delete/{productId} - Forbidden as USER")
+    @DisplayName("DELETE /api/v1/products/delete/{productId} - Forbidden as USER")
     @WithMockUser(roles = "USER")
     void deleteProduct_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(delete("/products/delete/1"))
+        mockMvc.perform(delete("/api/v1/products/delete/1"))
                 .andExpect(status().isForbidden());
 
         verify(productService, never()).deleteProductById(any());
     }
 
     @Test
-    @DisplayName("DELETE /products/delete/{productId} - Not Found")
+    @DisplayName("DELETE /api/v1/products/delete/{productId} - Not Found")
     @WithMockUser(roles = "PRODUCT_ADMIN")
     void deleteProduct_notFound_returnsNotFound() throws Exception {
         doThrow(new ProductNotFoundException("Product not found"))
                 .when(productService).deleteProductById(99L);
 
-        mockMvc.perform(delete("/products/delete/99"))
+        mockMvc.perform(delete("/api/v1/products/delete/99"))
                 .andExpect(status().isNotFound());
     }
 }
