@@ -2,7 +2,7 @@ name: CI/CD for Product Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'product-service/**'
 
