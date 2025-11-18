@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update # only for development. For Production, we use validate or none
     show-sql: true
 
 jwt:
