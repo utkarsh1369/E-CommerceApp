@@ -3,8 +3,8 @@ name: CI/CD for User Service
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'user-service/**'
+#    paths:
+#      - 'user-service/**'
 
 defaults:
   run:
