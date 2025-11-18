@@ -2,9 +2,9 @@ name: CI/CD for User Service
 
 on:
   push:
-    branches: [ "main" ]
-#    paths:
-#      - 'user-service/**'
+    branches: [ "master" ]
+    paths:
+      - 'user-service/**'
 
 defaults:
   run:
