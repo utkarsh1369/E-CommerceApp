@@ -7,7 +7,6 @@ import com.microservices.user_service.model.Role;
 import com.microservices.user_service.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,11 +15,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -34,22 +35,22 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Get list of all users.",description = "Only SUPER_ADMIN can access it.")
+    @Operation(summary = "Get list of all users.", description = "Only SUPER_ADMIN can access it.")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "List of Users Found",
+                    description = "List of Users Found (Paginated)",
                     content = @Content(
                             mediaType = "application/json",
-                            array = @ArraySchema(schema = @Schema(implementation = UserDto.class))
+                            schema = @Schema(implementation = Page.class)
                     )
             ),
-            @ApiResponse(responseCode = "401",description = "Unauthorized",content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
-            @ApiResponse(responseCode = "403",description = "Forbidden",content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+            @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        List<UserDto> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<Page<UserDto>> getAllUsers(@ParameterObject Pageable pageable) {
+        Page<UserDto> usersPage = userService.getAllUsers(pageable);
+        return ResponseEntity.ok(usersPage);
     }
 
     @GetMapping("/{userId}")

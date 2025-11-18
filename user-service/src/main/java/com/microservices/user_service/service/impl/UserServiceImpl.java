@@ -13,6 +13,8 @@ import com.microservices.user_service.repository.UserRepository;
 import com.microservices.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -110,23 +112,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
-    public List<UserDto> getAllUsers() {
+    @Transactional(readOnly = true)
+    public Page<UserDto> getAllUsers(Pageable pageable) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
             throw new UnauthorizedException("Unauthorized access");
         }
-
         if (!principal.getRoles().contains(Role.SUPER_ADMIN)) {
             throw new UnauthorizedException("Only SUPER_ADMIN can access all users");
         }
-
-        List<Users> users = userRepository.findAll();
-        log.info("Found {} users", users.size());
-
-        return userMapper.toDtoList(users);
+        Page<Users> userPage = userRepository.findAll(pageable);
+        log.info("Returning page {} of {} with {} users ({} users total)",
+                userPage.getNumber(),
+                userPage.getTotalPages(),
+                userPage.getNumberOfElements(),
+                userPage.getTotalElements());
+        return userPage.map(userMapper::toDto);
     }
-
 
     @Override
     @Transactional

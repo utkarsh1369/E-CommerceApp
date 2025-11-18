@@ -17,6 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -325,29 +329,38 @@ class UserServiceImplUnitTest {
     @Test
     void getAllUsers_Success() {
         mockSecurityContext("admin", "admin@test.com", Set.of(Role.SUPER_ADMIN));
-        when(userRepository.findAll()).thenReturn(List.of(userEntity));
-        when(userMapper.toDtoList(any())).thenReturn(List.of(userDto));
-
-        assertEquals(1, userService.getAllUsers().size());
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Users> mockUserPage = new PageImpl<>(List.of(userEntity), pageable, 1);
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(mockUserPage);
+        when(userMapper.toDto(any(Users.class))).thenReturn(userDto);
+        Page<UserDto> resultPage = userService.getAllUsers(pageable);
+        assertEquals(1, resultPage.getTotalElements());
+        assertEquals(1, resultPage.getContent().size());
+        assertEquals(userDto.getName(), resultPage.getContent().getFirst().getName());
+        verify(userRepository, times(1)).findAll(any(Pageable.class));
+        verify(userMapper, times(1)).toDto(any(Users.class));
     }
 
     @Test
     void getAllUsers_Unauthorized_Role() {
         mockSecurityContext("u1", "john@test.com", Set.of(Role.USER));
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+        Pageable pageable = PageRequest.of(0, 10);
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers(pageable));
     }
 
     @Test
     void getAllUsers_NoAuth() {
         when(securityContext.getAuthentication()).thenReturn(null);
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+        Pageable pageable = PageRequest.of(0, 10);
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers(pageable));
     }
 
     @Test
     void getAllUsers_WrongPrincipalType() {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn("STRING_PRINCIPAL");
-        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers());
+        Pageable pageable = PageRequest.of(0, 10);
+        assertThrows(UnauthorizedException.class, () -> userService.getAllUsers(pageable));
     }
 
     @Test
