@@ -2,7 +2,7 @@ name: CI/CD for Delivery Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'delivery-service/**'
 

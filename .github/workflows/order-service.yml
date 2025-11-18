@@ -2,7 +2,7 @@ name: CI/CD for Order Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'order-service/**'
 
