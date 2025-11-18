@@ -69,4 +69,33 @@ public class ProductServiceImpl implements ProductService {
         }
         productRepository.deleteById(productId);
     }
+
+    @Override
+    @Transactional
+    public ProductDTO reduceStock(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+
+        ProductDTO productDTO = productMapper.toDTO(product);
+
+        if(productDTO.getStock() < quantity) {
+            throw new RuntimeException("Insufficient stock for product:"+ productId);
+        }
+        productDTO.setStock(productDTO.getStock() - quantity);
+
+        productMapper.updateEntityFromDTO(productDTO, product);
+        Product updatedProduct = productRepository.save(product);
+        return productMapper.toDTO(updatedProduct);
+    }
+
+    @Override
+    public ProductDTO increaseStock(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+        ProductDTO productDTO = productMapper.toDTO(product);
+        productDTO.setStock(productDTO.getStock() + quantity);
+        productMapper.updateEntityFromDTO(productDTO, product);
+        Product updatedProduct = productRepository.save(product);
+        return productMapper.toDTO(updatedProduct);
+    }
 }

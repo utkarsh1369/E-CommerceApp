@@ -21,6 +21,7 @@ public class ProductMapper {
                 .productName(product.getProductName())
                 .productDescription(product.getProductDescription())
                 .productPrice(product.getProductPrice())
+                .stock(product.getStock())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();
@@ -36,6 +37,7 @@ public class ProductMapper {
                 .productName(dto.getProductName())
                 .productDescription(dto.getProductDescription())
                 .productPrice(dto.getProductPrice())
+                .stock(dto.getStock())
                 .build();
         // Note: createdAt and updatedAt are managed by Hibernate, so we don't set them
     }
@@ -54,6 +56,9 @@ public class ProductMapper {
         product.setProductName(dto.getProductName());
         product.setProductDescription(dto.getProductDescription());
         product.setProductPrice(dto.getProductPrice());
+        if(dto.getStock()!=null){
+            product.setStock(dto.getStock());
+        }
         product.setUpdatedAt(LocalDateTime.now());
     }
 }

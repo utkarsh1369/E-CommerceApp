@@ -17,6 +17,7 @@ import com.microservices.order_service.service.OrderService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,38 +39,71 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDto createOrder(OrderRequestDto orderRequestDto) {
-        log.info("Creating order for user: {}", orderRequestDto.getUserId());
 
-        BigDecimal orderAmount = calculateOrderAmount(orderRequestDto.getOrderItems());
+        BigDecimal orderAmount = BigDecimal.ZERO;
+        List<OrderItemDto> successfullyProcessedItems = new java.util.ArrayList<>();
 
-        Orders order = Orders.builder()
-                .userId(orderRequestDto.getUserId())
-                .orderAmount(orderAmount)
-                .paymentMode(orderRequestDto.getPaymentMode())
-                .isPaid(false)
-                .status(Status.PENDING)
-                .build();
+        try {
+            for (OrderItemDto itemDto : orderRequestDto.getOrderItems()) {
 
-        for (OrderItemDto itemDto : orderRequestDto.getOrderItems()) {
-            OrderItem orderItem = orderMapper.toOrderItem(itemDto, order);
-            order.addOrderItem(orderItem);
+                ResponseEntity<ProductDto> response = productClient.reduceStock(
+                        itemDto.getProductId(),
+                        itemDto.getQuantity()
+                );
+
+                ProductDto product = response.getBody();
+                if (product == null) {
+                    throw new ProductServiceException("Product not found: " + itemDto.getProductId());
+                }
+
+                successfullyProcessedItems.add(itemDto);
+
+                BigDecimal itemTotal = product.getProductPrice()
+                        .multiply(BigDecimal.valueOf(itemDto.getQuantity()));
+                orderAmount = orderAmount.add(itemTotal);
+            }
+
+            Orders order = Orders.builder()
+                    .userId(orderRequestDto.getUserId())
+                    .orderAmount(orderAmount)
+                    .paymentMode(orderRequestDto.getPaymentMode())
+                    .isPaid(false)
+                    .status(Status.PENDING)
+                    .build();
+
+            for (OrderItemDto itemDto : orderRequestDto.getOrderItems()) {
+                OrderItem orderItem = orderMapper.toOrderItem(itemDto, order);
+                order.addOrderItem(orderItem);
+            }
+
+            Orders savedOrder = orderRepository.save(order);
+
+            NotificationEvent notificationEvent = NotificationEvent.builder()
+                    .eventType("ORDER_CREATED")
+                    .orderId(savedOrder.getOrderId().toString())
+                    .userId(savedOrder.getUserId())
+                    .message(String.format("Order created successfully with ID: %d. Total amount: %.2f",
+                            savedOrder.getOrderId(), savedOrder.getOrderAmount()))
+                    .status(savedOrder.getStatus().name())
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            notificationEventProducer.sendNotification(notificationEvent);
+
+            return orderMapper.toResponseDto(savedOrder);
+
+        } catch (Exception e) {
+            log.error("Order failed. Initiating stock rollback for {} items...", successfullyProcessedItems.size());
+
+            for (OrderItemDto processedItem : successfullyProcessedItems) {
+                try {
+                    productClient.increaseStock(processedItem.getProductId(), processedItem.getQuantity());
+                    log.info("Rolled back stock for Product ID: {}", processedItem.getProductId());
+                } catch (Exception rollbackEx) {
+                    log.error("CRITICAL: Failed to rollback stock for Product {}. Manual fix required.", processedItem.getProductId());
+                }
+            }
+            throw new ProductServiceException("Order failed: " + e.getMessage());
         }
-        Orders savedOrder = orderRepository.save(order);
-
-        log.info("Order created successfully with ID: {}", savedOrder.getOrderId());
-
-        NotificationEvent notificationEvent = NotificationEvent.builder()
-                .eventType("ORDER_CREATED")
-                .orderId(savedOrder.getOrderId().toString())
-                .userId(savedOrder.getUserId())
-                .message(String.format("Order created successfully with ID: %d. Total amount: ₹%.2f",
-                        savedOrder.getOrderId(), savedOrder.getOrderAmount()))
-                .status(savedOrder.getStatus().name())
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        notificationEventProducer.sendNotification(notificationEvent);
-        return orderMapper.toResponseDto(savedOrder);
     }
 
     @Override

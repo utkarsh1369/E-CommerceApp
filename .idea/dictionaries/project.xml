@@ -5,6 +5,7 @@
       <w>configserver</w>
       <w>deliverydb</w>
       <w>ghcr</w>
+      <w>postgre</w>
       <w>utkarsh</w>
     </words>
   </dictionary>

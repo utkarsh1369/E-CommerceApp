@@ -1,6 +1,7 @@
 package com.microservice.product_service.model.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -25,6 +26,10 @@ public class ProductDTO {
     @NotNull(message = "Product price is required")
     @DecimalMin(value = "0.01", message = "Price must be greater than 0")
     private BigDecimal productPrice;
+
+    @NotNull
+    @Min(value = 0)
+    private Integer stock;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

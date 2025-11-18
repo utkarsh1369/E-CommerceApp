@@ -68,6 +68,44 @@ public class ProductController {
         return ResponseEntity.ok(updatedProduct);
     }
 
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','PRODUCT_ADMIN','USER')")
+    @PatchMapping("/reduce-stock/{productId}")
+    @Operation(summary = "Update Stock",description = "Only SUPER_ADMIN or PRODUCT_ADMIN has permission")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Stock Updated",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ProductDTO.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400",description = "Bad Request",content = @Content),
+            @ApiResponse(responseCode = "401",description = "Unauthorized",content = @Content),
+            @ApiResponse(responseCode = "403",description = "Forbidden",content = @Content)
+    })
+    public ResponseEntity<ProductDTO> reduceStock(@PathVariable Long productId,@RequestParam Integer quantity){
+        ProductDTO updatedProduct = productService.reduceStock(productId,quantity);
+        return ResponseEntity.ok(updatedProduct);
+    }
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','PRODUCT_ADMIN','USER')")
+    @PatchMapping("/increase-stock/{productId}")
+    @Operation(summary = "Update Stock",description = "Only SUPER_ADMIN or PRODUCT_ADMIN has permission")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Stock Updated",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ProductDTO.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400",description = "Bad Request",content = @Content),
+            @ApiResponse(responseCode = "401",description = "Unauthorized",content = @Content),
+            @ApiResponse(responseCode = "403",description = "Forbidden",content = @Content)
+    })
+    public ResponseEntity<ProductDTO> increaseStock(@PathVariable Long productId,@RequestParam Integer quantity){
+        ProductDTO updatedProduct = productService.increaseStock(productId,quantity);
+        return ResponseEntity.ok(updatedProduct);
+    }
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PRODUCT_ADMIN', 'USER','ORDER_ADMIN')")
     @GetMapping
     @Operation(summary = "Get all Products",description = "Only SUPER_ADMIN,PRODUCT_ADMIN and ORDER_ADMIN has permission")
