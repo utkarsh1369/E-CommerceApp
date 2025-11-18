@@ -72,7 +72,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update # must be changed to validate or none when in production.
     show-sql: true
 
 # --- !! SECRETS (MUST MATCH API-GATEWAY) !! ---
